@@ -80,6 +80,7 @@ main(int argc, char *argv[]) {
     // AP Mobility
     MobilityHelper apMobility;
     // TODO: final physical layout of the nodes
+    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(10.0),
             "MinY", DoubleValue(10.0),
@@ -87,18 +88,14 @@ main(int argc, char *argv[]) {
             "DeltaY", DoubleValue(20.0),
             "GridWidth", UintegerValue(5),
             "LayoutType", StringValue("RowFirst"));
-
-    apMobility.Install(apNodes);
-
-    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.Install(apNodes);
 
     // server Mobility
     MobilityHelper serverMobility;
     serverMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     serverMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(300.0),
-            "MinY", DoubleValue(75.0));
+            "MinX", DoubleValue(200.0),
+            "MinY", DoubleValue(50.0));
     serverMobility.Install(server);
 
     // robot Mobility
