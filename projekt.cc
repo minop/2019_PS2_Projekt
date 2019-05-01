@@ -10,6 +10,8 @@
 
 using namespace ns3;
 
+void runSim(double);
+
 int
 main(int argc, char *argv[]) {
     bool doNetanim = false;
@@ -80,6 +82,7 @@ main(int argc, char *argv[]) {
     // AP Mobility
     MobilityHelper apMobility;
     // TODO: final physical layout of the nodes
+    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(10.0),
             "MinY", DoubleValue(10.0),
@@ -87,18 +90,14 @@ main(int argc, char *argv[]) {
             "DeltaY", DoubleValue(20.0),
             "GridWidth", UintegerValue(5),
             "LayoutType", StringValue("RowFirst"));
-
-    apMobility.Install(apNodes);
-
-    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.Install(apNodes);
 
     // server Mobility
     MobilityHelper serverMobility;
     serverMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     serverMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(300.0),
-            "MinY", DoubleValue(75.0));
+            "MinX", DoubleValue(200.0),
+            "MinY", DoubleValue(50.0));
     serverMobility.Install(server);
 
     // robot Mobility
@@ -132,32 +131,30 @@ main(int argc, char *argv[]) {
 
 
     // Application
-    // TODO:
-    /*
-    UdpEchoServerHelper echoServer(9);
+    UdpServerHelper serverHelp(9);
 
-    ApplicationContainer serverApps = echoServer.Install(csmaNodes.Get(nCsma));
+    ApplicationContainer serverApps = serverHelp.Install(server);
     serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0));
+    serverApps.Stop(Seconds(20.0));
 
-    UdpEchoClientHelper echoClient(csmaInterfaces.GetAddress(nCsma), 9);
-    echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    echoClient.SetAttribute("PacketSize", UintegerValue(1024));
+    UdpClientHelper client(wifiInterfaces.GetAddress (20), 9);
+    client.SetAttribute("MaxPackets", UintegerValue(1));
+    client.SetAttribute("Interval", TimeValue(Seconds(1.0)));
+    client.SetAttribute("PacketSize", UintegerValue(1024));
 
-    ApplicationContainer clientApps =
-            echoClient.Install(wifiStaNodes.Get(nWifi - 1));
+    ApplicationContainer clientApps = client.Install(robot);
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(10.0));
-     */
 
 
     // Netanim
     if (doNetanim) {
         AnimationInterface anim("netanim.xml");
+        
         // APs
         for (int i = 0; i < apNodes.GetN(); ++i) {
             anim.UpdateNodeColor(apNodes.Get(i), 0, 0, 0);
+            anim.UpdateNodeDescription(apNodes.Get(i), "");
         }
         // server
         anim.UpdateNodeColor(server, 0, 255, 0);
@@ -167,11 +164,17 @@ main(int argc, char *argv[]) {
         anim.UpdateNodeDescription(robot, "Robot");
         
         anim.EnablePacketMetadata();
+        
+        runSim(simTime);
     }
+    else {
+        runSim(simTime);
+    }
+    return 0;
+}
 
+void runSim(double simTime) {
     Simulator::Stop(Seconds(simTime));
-
     Simulator::Run();
     Simulator::Destroy();
-    return 0;
 }
