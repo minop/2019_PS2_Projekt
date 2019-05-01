@@ -1,5 +1,4 @@
 #include "ns3/core-module.h"
-#include "ns3/point-to-point-module.h"
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
@@ -7,50 +6,46 @@
 #include "ns3/internet-module.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/ssid.h"
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
 int
 main(int argc, char *argv[]) {
-    /*
-  bool verbose = true;
-  uint32_t nCsma = 3;
-  uint32_t nWifi = 3;
-  bool tracing = false;
+    bool doNetanim = false;
+    double simTime = 10.0;
 
-  CommandLine cmd;
-  cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
-  cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
-  cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
-  cmd.AddValue ("tracing", "Enable pcap tracing", tracing); 
+    // CommandLine arguments
+    CommandLine cmd;
+    cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
+    cmd.AddValue("simTime", "Total simulation time", simTime);
+    cmd.Parse(argc, argv);
 
-  cmd.Parse (argc,argv);
-     */
 
     // Server Node
     NodeContainer snc;
     snc.Create(1);
     Ptr<Node> server = snc.Get(0);
-    
+
     // AP Nodes
     NodeContainer apNodes;
     apNodes.Create(20);
-    
+
     // UAV Node
     NodeContainer rnc;
     rnc.Create(1);
     Ptr<Node> robot = rnc.Get(0);
-    
+
     // helper containers to install nodes more easily
     NodeContainer ethernetNodes;
     ethernetNodes.Add(server);
     ethernetNodes.Add(apNodes);
-    
+
     NodeContainer wifiNodes;
     wifiNodes.Add(apNodes);
     wifiNodes.Add(robot);
 
-    
+
     // Ethernet connection from APs to server
     CsmaHelper ethernet;
     // TODO: ethernet attributes
@@ -81,7 +76,7 @@ main(int argc, char *argv[]) {
     mac.SetType("ns3::ApWifiMac",
             "Ssid", SsidValue(ssid));
 
-    
+
     // AP Mobility
     MobilityHelper apMobility;
     // TODO: final physical layout of the nodes
@@ -97,7 +92,7 @@ main(int argc, char *argv[]) {
 
     apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.Install(apNodes);
-    
+
     // server Mobility
     MobilityHelper serverMobility;
     serverMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -105,7 +100,7 @@ main(int argc, char *argv[]) {
             "MinX", DoubleValue(300.0),
             "MinY", DoubleValue(75.0));
     serverMobility.Install(server);
-    
+
     // robot Mobility
     // TODO: some mobility
     MobilityHelper robotMobility;
@@ -115,15 +110,15 @@ main(int argc, char *argv[]) {
             "MinX", DoubleValue(50.0),
             "MinY", DoubleValue(50.0));
     robotMobility.Install(robot);
-    
-    
+
+
     // InternetStack
     InternetStackHelper stack;
     stack.Install(server);
     stack.Install(apNodes);
     stack.Install(robot);
 
-    
+
     // Addresses
     Ipv4AddressHelper address;
 
@@ -154,11 +149,27 @@ main(int argc, char *argv[]) {
             echoClient.Install(wifiStaNodes.Get(nWifi - 1));
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(10.0));
-    */
-    
-   // Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+     */
 
-    Simulator::Stop(Seconds(10.0));
+
+    // Netanim
+    if (doNetanim) {
+        AnimationInterface anim("netanim.xml");
+        // APs
+        for (int i = 0; i < apNodes.GetN(); ++i) {
+            anim.UpdateNodeColor(apNodes.Get(i), 0, 0, 0);
+        }
+        // server
+        anim.UpdateNodeColor(server, 0, 255, 0);
+        anim.UpdateNodeDescription(server, "Server");
+        // robot
+        anim.UpdateNodeColor(robot, 255, 0, 0);
+        anim.UpdateNodeDescription(robot, "Robot");
+        
+        anim.EnablePacketMetadata();
+    }
+
+    Simulator::Stop(Seconds(simTime));
 
     Simulator::Run();
     Simulator::Destroy();
