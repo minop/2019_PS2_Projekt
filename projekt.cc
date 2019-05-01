@@ -28,16 +28,18 @@ main(int argc, char *argv[]) {
      */
 
     // Server Node
-    Node sn = Node();
-    Ptr<Node> server = Ptr<Node>(&sn);
+    NodeContainer snc;
+    snc.Create(1);
+    Ptr<Node> server = snc.Get(0);
     
     // AP Nodes
     NodeContainer apNodes;
     apNodes.Create(20);
     
     // UAV Node
-    Node rn = Node();
-    Ptr<Node> robot = Ptr<Node>(&rn);
+    NodeContainer rnc;
+    rnc.Create(1);
+    Ptr<Node> robot = rnc.Get(0);
     
     // helper containers to install nodes more easily
     NodeContainer ethernetNodes;
@@ -154,7 +156,7 @@ main(int argc, char *argv[]) {
     clientApps.Stop(Seconds(10.0));
     */
     
-    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+   // Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     Simulator::Stop(Seconds(10.0));
 
