@@ -10,6 +10,8 @@
 
 using namespace ns3;
 
+void runSim(double);
+
 int
 main(int argc, char *argv[]) {
     bool doNetanim = false;
@@ -152,9 +154,11 @@ main(int argc, char *argv[]) {
     // Netanim
     if (doNetanim) {
         AnimationInterface anim("netanim.xml");
+        
         // APs
         for (int i = 0; i < apNodes.GetN(); ++i) {
             anim.UpdateNodeColor(apNodes.Get(i), 0, 0, 0);
+            anim.UpdateNodeDescription(apNodes.Get(i), "");
         }
         // server
         anim.UpdateNodeColor(server, 0, 255, 0);
@@ -164,11 +168,17 @@ main(int argc, char *argv[]) {
         anim.UpdateNodeDescription(robot, "Robot");
         
         anim.EnablePacketMetadata();
+        
+        runSim(simTime);
     }
+    else {
+        runSim(simTime);
+    }
+    return 0;
+}
 
+void runSim(double simTime) {
     Simulator::Stop(Seconds(simTime));
-
     Simulator::Run();
     Simulator::Destroy();
-    return 0;
 }
