@@ -1,0 +1,4 @@
+# ignoruj vsetko okrem projekt.cc a .gitignore
+*.cc
+*.py
+!projekt.cc
