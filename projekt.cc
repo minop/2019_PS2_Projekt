@@ -67,7 +67,8 @@ main(int argc, char *argv[]) {
     
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   // set it to zero; otherwise, gain will be added
-  wifiPhy.Set ("RxGain", DoubleValue (-10) );
+  wifiPhy.Set ("RxGain", DoubleValue (10000000));
+  wifiPhy.Set ("TxGain", DoubleValue (10000000));
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
   wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
 
@@ -159,6 +160,8 @@ main(int argc, char *argv[]) {
     ApplicationContainer clientApps = client.Install(rnc);
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(10.0));
+    
+    //Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
 
     // Netanim
