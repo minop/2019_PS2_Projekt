@@ -1,4 +1,7 @@
 # ignoruj vsetko okrem projekt.cc a .gitignore
+
+# nas goodle doc:
+# https://docs.google.com/document/d/1ZxXOI2AOFGe7i3WkLXqBaVTSurXWehx0OwuI89hUyCA/edit?fbclid=IwAR3FWkBtk8sVGzNE8r3pVs02DZrIB_gVr7N4TcCyjy9b4f5lIiyA3_Ta1Ig
 *.cc
 *.py
 !projekt.cc
