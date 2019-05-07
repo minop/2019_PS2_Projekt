@@ -143,6 +143,21 @@ main(int argc, char *argv[]) {
 
 
     // Application
+    uint16_t port = 9;
+    OnOffHelper onoff ("ns3::UdpSocketFactory",
+                     Address (InetSocketAddress(wifiInterfaces.GetAddress(12), port)));
+
+    ApplicationContainer apps = onoff.Install(robot);
+    apps.Start (Seconds (3));
+    apps.Stop (Seconds (simTime - 1));
+
+    // Create a packet sink to receive these packets
+    PacketSinkHelper sink ("ns3::UdpSocketFactory",
+                         InetSocketAddress (Ipv4Address::GetAny(), port));
+    apps = sink.Install (server);
+    apps.Start (Seconds (3));
+    
+    /*
     UdpServerHelper serverHelp;
 
     NodeContainer testServerNode = NodeContainer(apNodes.Get(12));
@@ -159,7 +174,7 @@ main(int argc, char *argv[]) {
     ApplicationContainer clientApps = client.Install(rnc);
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(10.0));
-
+    */
 
     // Netanim
     if (doNetanim) {
