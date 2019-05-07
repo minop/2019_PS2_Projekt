@@ -64,6 +64,18 @@ main(int argc, char *argv[]) {
     phy.SetChannel(channel.Create());
 
     WifiHelper wifi;
+    
+    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+  // set it to zero; otherwise, gain will be added
+  wifiPhy.Set ("RxGain", DoubleValue (-10) );
+  // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
+  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
+
+  YansWifiChannelHelper wifiChannel;
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  wifiPhy.SetChannel (wifiChannel.Create ());
+    
     wifi.SetRemoteStationManager("ns3::AarfWifiManager");
 
     WifiMacHelper mac;
@@ -131,18 +143,20 @@ main(int argc, char *argv[]) {
 
 
     // Application
-    UdpServerHelper serverHelp(9);
+    UdpServerHelper serverHelp;
 
-    ApplicationContainer serverApps = serverHelp.Install(server);
+    NodeContainer testServerNode = NodeContainer(apNodes.Get(12));
+    
+    ApplicationContainer serverApps = serverHelp.Install(testServerNode);
     serverApps.Start(Seconds(1.0));
     serverApps.Stop(Seconds(20.0));
 
-    UdpClientHelper client(wifiInterfaces.GetAddress (20), 9);
+    UdpClientHelper client((Address)wifiInterfaces.GetAddress(12));
     client.SetAttribute("MaxPackets", UintegerValue(1));
     client.SetAttribute("Interval", TimeValue(Seconds(1.0)));
     client.SetAttribute("PacketSize", UintegerValue(1024));
 
-    ApplicationContainer clientApps = client.Install(robot);
+    ApplicationContainer clientApps = client.Install(rnc);
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(10.0));
 
