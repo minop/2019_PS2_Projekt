@@ -21,14 +21,9 @@ bool logRobotCallback = false;
 bool returningHome = false;
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
 Ptr<RandomRectanglePositionAllocator> homeAllocator;
-
-static void changeRobotSpeed() {
-    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
-}
-
-static void changePingFrequency() {
-    Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
-}
+NodeContainer serverNodes;
+NodeContainer apNodes;
+NodeContainer robotNodes;
 
 void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     Vector pos = mobModel->GetPosition();
@@ -57,33 +52,23 @@ void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     }
 }
 
-int main(int argc, char *argv[]) {
-    // Local variables / Simulation properties
-    bool doNetanim = true; // TODO: change to false
-    double simTime = 30.0;
+static void changeRobotSpeed() {
+    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
+}
 
-    // Simulation defaults are typically set before command line arguments are parsed.
-    Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
-    Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
+static void changePingFrequency() {
+    Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
+}
 
-    // CommandLine arguments
-    CommandLine cmd;
-    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
-    cmd.AddValue("simTime", "Total simulation time", simTime);
-    cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
-    cmd.Parse(argc, argv);
-
+static void doSimulation(bool doNetanim, double simTime, bool logRobotCallback){
     // Server Node
-    NodeContainer serverNodes;
     serverNodes.Create(1);
     Ptr<Node> server = serverNodes.Get(0);
 
     // AP Nodes
-    NodeContainer apNodes;
     apNodes.Create(20);
 
     // UAV Node
-    NodeContainer robotNodes;
     robotNodes.Create(1);
     Ptr<Node> robot = robotNodes.Get(0);
 
@@ -238,6 +223,27 @@ int main(int argc, char *argv[]) {
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
     Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
+}
+
+int main(int argc, char *argv[]) {
+    // Local variables / Simulation properties
+    bool doNetanim = true; // TODO: change to false
+    double simTime = 30.0;
+
+    // Simulation defaults are typically set before command line arguments are parsed.
+    Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
+    Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
+
+    // CommandLine arguments
+    CommandLine cmd;
+    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
+    cmd.AddValue("simTime", "Total simulation time", simTime);
+    cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
+    cmd.Parse(argc, argv);
+
+    // perform simulations
+    doSimulation(doNetanim, simTime, logRobotCallback);
+    
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -254,11 +260,11 @@ int main(int argc, char *argv[]) {
             anim.UpdateNodeDescription(apNodes.Get(i), "");
         }
         // server
-        anim.UpdateNodeColor(server, 0, 255, 0);
-        anim.UpdateNodeDescription(server, "Server");
+        anim.UpdateNodeColor(serverNodes.Get(0), 0, 255, 0);
+        anim.UpdateNodeDescription(serverNodes.Get(0), "Server");
         // robot
-        anim.UpdateNodeColor(robot, 255, 0, 0);
-        anim.UpdateNodeDescription(robot, "Robot");
+        anim.UpdateNodeColor(robotNodes.Get(0), 255, 0, 0);
+        anim.UpdateNodeDescription(robotNodes.Get(0), "Robot");
 
         anim.EnablePacketMetadata();
 
