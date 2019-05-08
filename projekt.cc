@@ -17,8 +17,7 @@ using namespace ns3;
 
 void runSim(double);
 
-int
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     //
     // First, we declare and initialize a few local variables that control some
     // simulation parameters.
