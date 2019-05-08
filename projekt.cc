@@ -59,6 +59,10 @@ void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     }
 }
 
+void macRecievePacketCallback(Ptr< const Packet> packet) {
+    // TODO: count the packets somewhere
+}
+
 static void changeRobotSpeed() {
     Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
@@ -231,6 +235,8 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     ///////////////////////////////////////////////////////////////////////////
 
     Config::ConnectWithoutContext("/NodeList/21/$ns3::MobilityModel/CourseChange", MakeCallback(&returnHomeCallback));
+    // TODO: should only be registered if some graphs are being made (to speed thing up)
+    Config::ConnectWithoutContext("/NodeList/0/DeviceList/0/$ns3::CsmaNetDevice/MacRx", MakeCallback(&macRecievePacketCallback));
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
     Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
