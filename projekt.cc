@@ -18,28 +18,17 @@ using namespace ns3;
 void runSim(double);
 
 int main(int argc, char *argv[]) {
-    //
-    // First, we declare and initialize a few local variables that control some
-    // simulation parameters.
-    //
+    // Local variables / Simulation properties
     uint32_t backboneNodes = 10;
     uint32_t infraNodes = 2;
     uint32_t lanNodes = 2;
     uint32_t stopTime = 20;
     bool useCourseChangeCallback = false;
 
-    //
-    // Simulation defaults are typically set next, before command line
-    // arguments are parsed.
-    //
+    // Simulation defaults are typically set before command line arguments are parsed.
     Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
     Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
 
-    //
-    // For convenience, we add the local variables to the command line argument
-    // system so that they can be overridden with flags such as
-    // "--backboneNodes=20"
-    //
     CommandLine cmd;
     cmd.AddValue("backboneNodes", "number of backbone nodes", backboneNodes);
     cmd.AddValue("infraNodes", "number of leaf nodes", infraNodes);
@@ -47,22 +36,9 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("stopTime", "simulation stop time (seconds)", stopTime);
     cmd.AddValue("useCourseChangeCallback", "whether to enable course change tracing", useCourseChangeCallback);
 
-    //
-    // The system global variables and the local values added to the argument
-    // system can be overridden by command line arguments by using this call.
-    //
+    // The system global variables and the local values added to the argument system can be overridden by command line arguments by using this call.
     cmd.Parse(argc, argv);
-
-    if (stopTime < 10) {
-        std::cout << "Use a simulation stop time >= 10 seconds" << std::endl;
-        exit(1);
-    }
-    ///////////////////////////////////////////////////////////////////////////
-    //                                                                       //
-    // Construct the backbone                                                //
-    //                                                                       //
-    ///////////////////////////////////////////////////////////////////////////
-
+    
     // Server Node
     NodeContainer serverNodes;
     serverNodes.Create(1);
@@ -85,17 +61,14 @@ int main(int argc, char *argv[]) {
     NodeContainer wifiNodes;
     wifiNodes.Add(apNodes);
     wifiNodes.Add(robot);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                                                                       //
+    // Construct the wifi network                                            //
+    //                                                                       //
+    ///////////////////////////////////////////////////////////////////////////
     
-    //
-    // Create a container to manage the nodes of the adhoc (backbone) network.
-    // Later we'll create the rest of the nodes we'll need.
-    //
-    //NodeContainer backbone;
-    //backbone.Create(backboneNodes);
-    //
-    // Create the backbone wifi net devices and install them into the nodes in
-    // our container
-    //
+    // Create the wifi net devices and install them into the nodes in our container
     WifiHelper wifi;
     WifiMacHelper mac;
     mac.SetType("ns3::AdhocWifiMac");
@@ -106,46 +79,20 @@ int main(int argc, char *argv[]) {
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
-    // We enable OLSR (which will be consulted at a higher priority than
-    // the global routing) on the backbone ad hoc nodes
-    //NS_LOG_INFO("Enabling OLSR routing on all backbone nodes");
+    // TODO: maybe different routing? (AODV?)
+    // We enable OLSR (which will be consulted at a higher priority than the global routing) on the backbone ad hoc nodes
     OlsrHelper olsr;
-    //
     // Add the IPv4 protocol stack to the nodes in our container
-    //
     InternetStackHelper internet;
     internet.SetRoutingHelper(olsr); // has effect on the next Install ()
     internet.Install(wifiNodes);
 
-    //
-    // Assign IPv4 addresses to the device drivers (actually to the associated
-    // IPv4 interfaces) we just created.
-    //
+    // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
     Ipv4AddressHelper ipAddrs;
     ipAddrs.SetBase("192.168.0.0", "255.255.255.0");
     ipAddrs.Assign(wifiDevices);
 
-    //
-    // The ad-hoc network nodes need a mobility model so we aggregate one to
-    // each of the nodes we just finished building.
-    //
-    MobilityHelper mobility;
-    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(20.0),
-            "MinY", DoubleValue(20.0),
-            "DeltaX", DoubleValue(20.0),
-            "DeltaY", DoubleValue(20.0),
-            "GridWidth", UintegerValue(5),
-            "LayoutType", StringValue("RowFirst"));
-    mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
-            "Bounds", RectangleValue(Rectangle(-500, 500, -500, 500)),
-            "Speed", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
-            "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.2]"));
-<<<<<<< HEAD
-    mobility.Install(wifiNodes);
-=======
-    mobility.Install(backbone);
-    
+    // APs Mobility
     MobilityHelper apMobility;
     // TODO: final physical layout of the nodes
     apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -167,7 +114,7 @@ int main(int argc, char *argv[]) {
     serverMobility.Install(server);
 
     // robot Mobility
-    // TODO: some mobility
+    // TODO: randomWaypointModel
     MobilityHelper robotMobility;
     robotMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
             "Bounds", RectangleValue(Rectangle(0, 100, 0, 100)));
@@ -175,132 +122,27 @@ int main(int argc, char *argv[]) {
             "MinX", DoubleValue(50.0),
             "MinY", DoubleValue(50.0));
     robotMobility.Install(robot);
->>>>>>> origin/mobility
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
-    // Construct the LANs                                                    //
+    // Construct the LAN                                                     //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    // Reset the address base-- all of the CSMA networks will be in
-    // the "172.16 address space
+    // Reset the address base-- all of the CSMA networks will be in the "172.16 address space
     ipAddrs.SetBase("172.16.0.0", "255.255.255.0");
 
-
-    //
-        // Create the CSMA net devices and install them into the nodes in our
-        // collection.
-        //
-        CsmaHelper csma;
-        csma.SetChannelAttribute("DataRate",
-                DataRateValue(DataRate(5000000)));
-        csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
-        NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
-        //
-        // Add the IPv4 protocol stack to the new LAN nodes (only server!)
-        //
-        internet.Install(serverNodes);
-        //
-        // Assign IPv4 addresses to the device drivers (actually to the
-        // associated IPv4 interfaces) we just created.
-        //
-        ipAddrs.Assign(lanDevices);
-        //
-        // The new LAN nodes need a mobility model so we aggregate one
-        // to each of the nodes we just finished building.
-        //
-        /*
-        MobilityHelper mobilityLan;
-        Ptr<ListPositionAllocator> subnetAlloc =
-                CreateObject<ListPositionAllocator> ();
-        for (uint32_t j = 0; j < serverNodes.GetN(); ++j) {
-            subnetAlloc->Add(Vector(0.0, j * 10 + 10, 0.0));
-        }
-        mobilityLan.PushReferenceMobilityModel(wifiNodes.Get(i));
-        mobilityLan.SetPositionAllocator(subnetAlloc);
-        mobilityLan.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        mobilityLan.Install(newLanNodes);
-         * */
-
-    ///////////////////////////////////////////////////////////////////////////
-    //                                                                       //
-    // Construct the mobile networks                                         //
-    //                                                                       //
-    ///////////////////////////////////////////////////////////////////////////
-
-    /*
-    // Reset the address base-- all of the 802.11 networks will be in
-    // the "10.0" address space
-    ipAddrs.SetBase("10.0.0.0", "255.255.255.0");
-
-    for (uint32_t i = 0; i < 21; ++i) {
-        //NS_LOG_INFO("Configuring wireless network for backbone node " << i);
-        //
-        // Create a container to manage the nodes of the LAN.  We need
-        // two containers here; one with all of the new nodes, and one
-        // with all of the nodes including new and existing nodes
-        //
-        NodeContainer stas;
-        stas.Create(infraNodes - 1);
-        // Now, create the container with all nodes on this link
-        NodeContainer infra(wifiNodes.Get(i), stas);
-        //
-        // Create an infrastructure network
-        //
-        WifiHelper wifiInfra;
-        WifiMacHelper macInfra;
-        wifiPhy.SetChannel(wifiChannel.Create());
-        // Create unique ssids for these networks
-        std::string ssidString("wifi-infra");
-        std::stringstream ss;
-        ss << i;
-        ssidString += ss.str();
-        Ssid ssid = Ssid(ssidString);
-        wifiInfra.SetRemoteStationManager("ns3::ArfWifiManager");
-        // setup stas
-        macInfra.SetType("ns3::StaWifiMac",
-                "Ssid", SsidValue(ssid));
-        NetDeviceContainer staDevices = wifiInfra.Install(wifiPhy, macInfra, stas);
-        // setup ap.
-        macInfra.SetType("ns3::ApWifiMac",
-                "Ssid", SsidValue(ssid),
-                "BeaconInterval", TimeValue(Seconds(2.5)));
-        NetDeviceContainer apDevices = wifiInfra.Install(wifiPhy, macInfra, wifiNodes.Get(i));
-        // Collect all of these new devices
-        NetDeviceContainer infraDevices(apDevices, staDevices);
-
-        // Add the IPv4 protocol stack to the nodes in our container
-        //
-        internet.Install(stas);
-        //
-        // Assign IPv4 addresses to the device drivers (actually to the associated
-        // IPv4 interfaces) we just created.
-        //
-        ipAddrs.Assign(infraDevices);
-        //
-        // Assign a new network prefix for each mobile network, according to
-        // the network mask initialized above
-        //
-        ipAddrs.NewNetwork();
-        //
-        // The new wireless nodes need a mobility model so we aggregate one
-        // to each of the nodes we just finished building.
-        //
-        Ptr<ListPositionAllocator> subnetAlloc =
-                CreateObject<ListPositionAllocator> ();
-        for (uint32_t j = 0; j < infra.GetN(); ++j) {
-            subnetAlloc->Add(Vector(0.0, j, 0.0));
-        }
-        mobility.PushReferenceMobilityModel(wifiNodes.Get(i));
-        mobility.SetPositionAllocator(subnetAlloc);
-        mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
-                "Bounds", RectangleValue(Rectangle(-10, 10, -10, 10)),
-                "Speed", StringValue("ns3::ConstantRandomVariable[Constant=3]"),
-                "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.4]"));
-        mobility.Install(stas);
-    }
-     * */
+    // Create the CSMA net devices and install them into the nodes in our collection.
+    CsmaHelper csma;
+    csma.SetChannelAttribute("DataRate",
+            DataRateValue(DataRate(5000000)));
+    csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
+    NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
+    
+    // Add the IPv4 protocol stack to the new LAN nodes (only the server is new!)
+    internet.Install(serverNodes);
+    // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
+    ipAddrs.Assign(lanDevices);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -310,21 +152,10 @@ int main(int argc, char *argv[]) {
 
     // Create the OnOff application to send UDP datagrams of size
     // 210 bytes at a rate of 10 Kb/s, between two nodes
-    // We'll send data from the first wired LAN node on the first wired LAN
-    // to the last wireless STA on the last infrastructure net, thereby
-    // causing packets to traverse CSMA to adhoc to infrastructure links
-
-    //NS_LOG_INFO("Create Applications.");
+    // Data is sent from the robot to the server
+    
     uint16_t port = 9; // Discard port (RFC 863)
 
-    // We want the source to be the first node created outside of the backbone
-    // Conveniently, the variable "backboneNodes" holds this node index value
-    //Ptr<Node> appSource = NodeList::GetNode(21);
-    // appSource = robot
-    // We want the sink to be the last node created in the topology.
-    //uint32_t lastNodeIndex = 21 + 21 * (lanNodes - 1) + 21 * (infraNodes - 1) - 1;
-    //Ptr<Node> appSink = NodeList::GetNode(lastNodeIndex);
-    // appSink = server
     // Let's fetch the IP address of the last node, which is on Ipv4Interface 1
     Ipv4Address remoteAddr = server->GetObject<Ipv4> ()->GetAddress(1, 0).GetLocal();
 
@@ -347,12 +178,8 @@ int main(int argc, char *argv[]) {
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    //NS_LOG_INFO("Configure Tracing.");
-    //CsmaHelper csma;
-
-    //
+    // TODO: remove? change?
     // Let's set up some ns-2-like ascii traces, using another helper class
-    //
     AsciiTraceHelper ascii;
     Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("mixed-wireless.tr");
     wifiPhy.EnableAsciiAll(stream);
@@ -366,10 +193,17 @@ int main(int argc, char *argv[]) {
     // pcap trace on the application data sink
     wifiPhy.EnablePcap("mixed-wireless", server->GetId(), 0);
 
+    // TODO: proper callbacks
     if (useCourseChangeCallback == true) {
         //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    //                                                                       //
+    // NetAnim                                                               //
+    //                                                                       //
+    ///////////////////////////////////////////////////////////////////////////
+    
     AnimationInterface anim("netanim.xml");
 
     ///////////////////////////////////////////////////////////////////////////
@@ -392,111 +226,6 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
     cmd.AddValue("simTime", "Total simulation time", simTime);
     cmd.Parse(argc, argv);
-
-
-    
-
-
-    // Ethernet connection from APs to server
-    CsmaHelper ethernet;
-    // TODO: ethernet attributes
-    ethernet.SetChannelAttribute("DataRate", StringValue("100Mbps"));
-    ethernet.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
-
-    NetDeviceContainer ethernetDevices;
-    ethernetDevices = ethernet.Install(ethernetNodes);
-
-    // Wifi connection from robot to APs
-    // TODO: wifi attributes
-    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
-    YansWifiPhyHelper phy = YansWifiPhyHelper::Default();
-    phy.SetChannel(channel.Create());
-
-    WifiHelper wifi;
-    wifi.SetRemoteStationManager("ns3::AarfWifiManager");
-
-    WifiMacHelper mac;
-    Ssid ssid = Ssid("ns-3-ssid");
-    mac.SetType("ns3::StaWifiMac",
-            "Ssid", SsidValue(ssid),
-            "ActiveProbing", BooleanValue(false));
-
-    NetDeviceContainer wifiDevices;
-    wifiDevices = wifi.Install(phy, mac, wifiNodes);
-
-    mac.SetType("ns3::ApWifiMac",
-            "Ssid", SsidValue(ssid));
-
-
-    // AP Mobility
-    MobilityHelper apMobility;
-    // TODO: final physical layout of the nodes
-    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(10.0),
-            "MinY", DoubleValue(10.0),
-            "DeltaX", DoubleValue(20.0),
-            "DeltaY", DoubleValue(20.0),
-            "GridWidth", UintegerValue(5),
-            "LayoutType", StringValue("RowFirst"));
-    apMobility.Install(apNodes);
-
-    // server Mobility
-    MobilityHelper serverMobility;
-    serverMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    serverMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(200.0),
-            "MinY", DoubleValue(50.0));
-    serverMobility.Install(server);
-
-    // robot Mobility
-    // TODO: some mobility
-    MobilityHelper robotMobility;
-    robotMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-            "Bounds", RectangleValue(Rectangle(0, 100, 0, 100)));
-    robotMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-            "MinX", DoubleValue(50.0),
-            "MinY", DoubleValue(50.0));
-    robotMobility.Install(robot);
-
-
-    // InternetStack
-    InternetStackHelper stack;
-    stack.Install(server);
-    stack.Install(apNodes);
-    stack.Install(robot);
-
-
-    // Addresses
-    Ipv4AddressHelper address;
-
-    address.SetBase("10.1.1.0", "255.255.255.0");
-    Ipv4InterfaceContainer ethernetInterfaces;
-    ethernetInterfaces = address.Assign(ethernetDevices);
-
-    address.SetBase("10.1.2.0", "255.255.255.0");
-    Ipv4InterfaceContainer wifiInterfaces;
-    wifiInterfaces = address.Assign(wifiDevices);
-
-
-    // Application
-    // TODO:
-    UdpEchoServerHelper echoServer(9);
-
-    ApplicationContainer serverApps = echoServer.Install(csmaNodes.Get(nCsma));
-    serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0));
-
-    UdpEchoClientHelper echoClient(csmaInterfaces.GetAddress(nCsma), 9);
-    echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    echoClient.SetAttribute("PacketSize", UintegerValue(1024));
-
-    ApplicationContainer clientApps =
-            echoClient.Install(wifiStaNodes.Get(nWifi - 1));
-    clientApps.Start(Seconds(2.0));
-    clientApps.Stop(Seconds(10.0));
-
 
     // Netanim
     if (doNetanim) {
