@@ -21,6 +21,10 @@ static void changeRobotSpeed(){
     Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed",StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
 
+static void changePingFrequency() {
+    Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
+}
+
 int main(int argc, char *argv[]) {
     // Local variables / Simulation properties
     bool doNetanim = true; // TODO: change to false
@@ -186,24 +190,9 @@ int main(int argc, char *argv[]) {
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
-    // Tracing configuration                                                 //
+    // Callback configuration                                                //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
-
-    // TODO: remove? change?
-    // Let's set up some ns-2-like ascii traces, using another helper class
-    AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("mixed-wireless.tr");
-    wifiPhy.EnableAsciiAll(stream);
-    csma.EnableAsciiAll(stream);
-    internet.EnableAsciiIpv4All(stream);
-
-    // Csma captures in non-promiscuous mode
-    csma.EnablePcapAll("mixed-wireless", false);
-    // pcap captures on the backbone wifi devices
-    wifiPhy.EnablePcap("mixed-wireless", wifiDevices, false);
-    // pcap trace on the application data sink
-    wifiPhy.EnablePcap("mixed-wireless", server->GetId(), 0);
 
     // TODO: proper callbacks
     /*
@@ -211,9 +200,9 @@ int main(int argc, char *argv[]) {
         //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
      *      */
-    
-    
-    Simulator::Schedule (Seconds (5.0), &changeRobotSpeed);
+
+    Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
+    Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
