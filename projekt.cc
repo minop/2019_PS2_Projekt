@@ -280,7 +280,6 @@ int main(int argc, char *argv[]) {
     cmd.Parse(argc, argv);
 
     // How many times will the simulation be run?
-
     uint64_t nRuns;
     if (makeGraphs)
         nRuns = 10;
