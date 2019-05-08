@@ -185,24 +185,9 @@ int main(int argc, char *argv[]) {
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
-    // Tracing configuration                                                 //
+    // Callback configuration                                                //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
-
-    // TODO: remove? change?
-    // Let's set up some ns-2-like ascii traces, using another helper class
-    AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("mixed-wireless.tr");
-    wifiPhy.EnableAsciiAll(stream);
-    csma.EnableAsciiAll(stream);
-    internet.EnableAsciiIpv4All(stream);
-
-    // Csma captures in non-promiscuous mode
-    csma.EnablePcapAll("mixed-wireless", false);
-    // pcap captures on the backbone wifi devices
-    wifiPhy.EnablePcap("mixed-wireless", wifiDevices, false);
-    // pcap trace on the application data sink
-    wifiPhy.EnablePcap("mixed-wireless", server->GetId(), 0);
 
     // TODO: proper callbacks
     /*
