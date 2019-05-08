@@ -12,6 +12,7 @@
 #include "ns3/olsr-helper.h"
 #include "ns3/csma-helper.h"
 #include "ns3/netanim-module.h"
+#include "ns3/gnuplot.h"
 #include "ns3/rng-seed-manager.h"
 
 using namespace ns3;
@@ -23,6 +24,7 @@ bool logRobotCallback = false;
 bool doNetanim = true; // TODO: change to false
 int makeGraph = 0;
 double simTime = 30.0;
+Gnuplot2dDataset data;
 
 // position allocators accessible from callbacks
 bool returningHome = false;
@@ -279,6 +281,16 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("graph", "[0-9], which graph should be generated; 0 for none", makeGraph);
     cmd.Parse(argc, argv);
 
+    // prvotne nastavenia v hl.funkcii
+    Gnuplot graf("graf1.svg");
+    graf.SetTerminal("svg");
+    graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
+    graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
+    graf.AppendExtra("set xrange[0:32]");
+    //data.SetTitle ("strata udajov");
+    data.SetStyle (Gnuplot2dDataset::LINES);
+    //data.SetErrorBars(Gnuplot2dDataset::Y);
+    
     // How many times will the simulation be run?
     uint64_t nRuns;
     if (makeGraph > 0 && makeGraph < 10)
