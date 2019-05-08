@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
     else if(makeGraph == 0)
         nRuns = 1;
     else {
-        std::cerr << "makeGraphs has to be from interval <0; 9>" << std::endl;
+        std::cerr << "makeGraph has to be from interval <0; 9>" << std::endl;
         return -1;
     }
 
@@ -311,10 +311,10 @@ int main(int argc, char *argv[]) {
         doSimulation();
     }
     
-    if(makeGraphs){
+    if(makeGraph){
         //zaverecne spustenie
         graf.AddDataset (data);
-        std::ofstream plotFile ("graf" + std::to_string(makeGraphs) + ".plt");
+        std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
         graf.GenerateOutput (plotFile);
         plotFile.close ();
         //if(system("gnuplot graf.plt"));
