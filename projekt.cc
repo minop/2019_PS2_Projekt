@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     //
     InternetStackHelper internet;
     internet.SetRoutingHelper(olsr); // has effect on the next Install ()
-    internet.Install(backbone);
+    internet.Install(wifiNodes);
 
     //
     // Assign IPv4 addresses to the device drivers (actually to the associated
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     //
     Ipv4AddressHelper ipAddrs;
     ipAddrs.SetBase("192.168.0.0", "255.255.255.0");
-    ipAddrs.Assign(backboneDevices);
+    ipAddrs.Assign(wifiDevices);
 
     //
     // The ad-hoc network nodes need a mobility model so we aggregate one to
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
             "Bounds", RectangleValue(Rectangle(-500, 500, -500, 500)),
             "Speed", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
             "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.2]"));
-    mobility.Install(backbone);
+    mobility.Install(wifiNodes);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
     ipAddrs.SetBase("172.16.0.0", "255.255.255.0");
 
 
-    for (uint32_t i = 0; i < backboneNodes; ++i) {
+    for (uint32_t i = 0; i < 21; ++i) {
         //NS_LOG_INFO("Configuring local area network for backbone node " << i);
         //
         // Create a container to manage the nodes of the LAN.  We need
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
         NodeContainer newLanNodes;
         newLanNodes.Create(lanNodes - 1);
         // Now, create the container with all nodes on this link
-        NodeContainer lan(backbone.Get(i), newLanNodes);
+        NodeContainer lan(wifiNodes.Get(i), newLanNodes);
         //
         // Create the CSMA net devices and install them into the nodes in our
         // collection.
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
         for (uint32_t j = 0; j < newLanNodes.GetN(); ++j) {
             subnetAlloc->Add(Vector(0.0, j * 10 + 10, 0.0));
         }
-        mobilityLan.PushReferenceMobilityModel(backbone.Get(i));
+        mobilityLan.PushReferenceMobilityModel(wifiNodes.Get(i));
         mobilityLan.SetPositionAllocator(subnetAlloc);
         mobilityLan.SetMobilityModel("ns3::ConstantPositionMobilityModel");
         mobilityLan.Install(newLanNodes);
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
     // the "10.0" address space
     ipAddrs.SetBase("10.0.0.0", "255.255.255.0");
 
-    for (uint32_t i = 0; i < backboneNodes; ++i) {
+    for (uint32_t i = 0; i < 21; ++i) {
         //NS_LOG_INFO("Configuring wireless network for backbone node " << i);
         //
         // Create a container to manage the nodes of the LAN.  We need
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
         NodeContainer stas;
         stas.Create(infraNodes - 1);
         // Now, create the container with all nodes on this link
-        NodeContainer infra(backbone.Get(i), stas);
+        NodeContainer infra(wifiNodes.Get(i), stas);
         //
         // Create an infrastructure network
         //
@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
         macInfra.SetType("ns3::ApWifiMac",
                 "Ssid", SsidValue(ssid),
                 "BeaconInterval", TimeValue(Seconds(2.5)));
-        NetDeviceContainer apDevices = wifiInfra.Install(wifiPhy, macInfra, backbone.Get(i));
+        NetDeviceContainer apDevices = wifiInfra.Install(wifiPhy, macInfra, wifiNodes.Get(i));
         // Collect all of these new devices
         NetDeviceContainer infraDevices(apDevices, staDevices);
 
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
         for (uint32_t j = 0; j < infra.GetN(); ++j) {
             subnetAlloc->Add(Vector(0.0, j, 0.0));
         }
-        mobility.PushReferenceMobilityModel(backbone.Get(i));
+        mobility.PushReferenceMobilityModel(wifiNodes.Get(i));
         mobility.SetPositionAllocator(subnetAlloc);
         mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
                 "Bounds", RectangleValue(Rectangle(-10, 10, -10, 10)),
@@ -301,9 +301,9 @@ int main(int argc, char *argv[]) {
     NS_ASSERT(lanNodes > 1 && infraNodes > 1);
     // We want the source to be the first node created outside of the backbone
     // Conveniently, the variable "backboneNodes" holds this node index value
-    Ptr<Node> appSource = NodeList::GetNode(backboneNodes);
+    Ptr<Node> appSource = NodeList::GetNode(21);
     // We want the sink to be the last node created in the topology.
-    uint32_t lastNodeIndex = backboneNodes + backboneNodes * (lanNodes - 1) + backboneNodes * (infraNodes - 1) - 1;
+    uint32_t lastNodeIndex = 21 + 21 * (lanNodes - 1) + 21 * (infraNodes - 1) - 1;
     Ptr<Node> appSink = NodeList::GetNode(lastNodeIndex);
     // Let's fetch the IP address of the last node, which is on Ipv4Interface 1
     Ipv4Address remoteAddr = appSink->GetObject<Ipv4> ()->GetAddress(1, 0).GetLocal();
@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
     // Csma captures in non-promiscuous mode
     csma.EnablePcapAll("mixed-wireless", false);
     // pcap captures on the backbone wifi devices
-    wifiPhy.EnablePcap("mixed-wireless", backboneDevices, false);
+    wifiPhy.EnablePcap("mixed-wireless", wifiDevices, false);
     // pcap trace on the application data sink
     wifiPhy.EnablePcap("mixed-wireless", appSink->GetId(), 0);
 
