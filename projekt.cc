@@ -17,13 +17,15 @@ using namespace ns3;
 
 void runSim(double);
 
+// global variables / simulation settings
 bool logRobotCallback = false;
 bool returningHome = false;
+bool doNetanim = true; // TODO: change to false
+double simTime = 30.0;
+
+// position allocators accessible from callbacks
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
 Ptr<RandomRectanglePositionAllocator> homeAllocator;
-NodeContainer serverNodes;
-NodeContainer apNodes;
-NodeContainer robotNodes;
 
 void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     Vector pos = mobModel->GetPosition();
@@ -60,15 +62,18 @@ static void changePingFrequency() {
     Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
 }
 
-static void doSimulation(bool doNetanim, double simTime, bool logRobotCallback){
+static void doSimulation() {
     // Server Node
+    NodeContainer serverNodes;
     serverNodes.Create(1);
     Ptr<Node> server = serverNodes.Get(0);
 
     // AP Nodes
+    NodeContainer apNodes;
     apNodes.Create(20);
 
     // UAV Node
+    NodeContainer robotNodes;
     robotNodes.Create(1);
     Ptr<Node> robot = robotNodes.Get(0);
 
@@ -223,27 +228,6 @@ static void doSimulation(bool doNetanim, double simTime, bool logRobotCallback){
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
     Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
-}
-
-int main(int argc, char *argv[]) {
-    // Local variables / Simulation properties
-    bool doNetanim = true; // TODO: change to false
-    double simTime = 30.0;
-
-    // Simulation defaults are typically set before command line arguments are parsed.
-    Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
-    Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
-
-    // CommandLine arguments
-    CommandLine cmd;
-    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
-    cmd.AddValue("simTime", "Total simulation time", simTime);
-    cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
-    cmd.Parse(argc, argv);
-
-    // perform simulations
-    doSimulation(doNetanim, simTime, logRobotCallback);
-    
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -272,12 +256,28 @@ int main(int argc, char *argv[]) {
     } else {
         runSim(simTime);
     }
-
-    return 0;
 }
 
 void runSim(double simTime) {
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
     Simulator::Destroy();
+}
+
+int main(int argc, char *argv[]) {
+    // Simulation defaults are typically set before command line arguments are parsed.
+    Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
+    Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
+
+    // CommandLine arguments
+    CommandLine cmd;
+    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
+    cmd.AddValue("simTime", "Total simulation time", simTime);
+    cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
+    cmd.Parse(argc, argv);
+
+    // perform simulations
+    doSimulation();
+
+    return 0;
 }
