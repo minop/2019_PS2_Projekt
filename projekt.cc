@@ -25,11 +25,22 @@ bool doNetanim = true; // TODO: change to false
 int makeGraph = 0;
 double simTime = 30.0;
 Gnuplot2dDataset data;
-
+int packetsReceived = 0;
+std::vector<double> arrivalTimes = {};
+std::vector<int> packetsPerSec[10];
 // position allocators accessible from callbacks
 bool returningHome = false;
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
 Ptr<RandomRectanglePositionAllocator> homeAllocator;
+
+void packetReceivedCallback(Ptr< const Packet > packet, const Address &address){
+    packetsReceived++;
+    arrivalTimes.push_back(Simulator::Now().GetSeconds());
+    
+    data.Add(Simulator::Now().GetSeconds(), packetsReceived);
+    
+    //std::cout << "Ive received a packet!\n";
+}
 
 void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     Vector pos = mobModel->GetPosition();
@@ -71,16 +82,17 @@ static void doSimulation() {
     NodeContainer serverNodes;
     serverNodes.Create(1);
     Ptr<Node> server = serverNodes.Get(0);
-
+    
     // AP Nodes
     NodeContainer apNodes;
+    std::cout << "je toto posledny vypis?\n";
     apNodes.Create(20);
-
+    
     // UAV Node
     NodeContainer robotNodes;
     robotNodes.Create(1);
     Ptr<Node> robot = robotNodes.Get(0);
-
+    
     // helper containers to install nodes more easily
     NodeContainer ethernetNodes;
     ethernetNodes.Add(server);
@@ -95,7 +107,6 @@ static void doSimulation() {
     // Construct the wifi network                                            //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
-
     // Create the wifi net devices and install them into the nodes in our container
     WifiHelper wifi;
     WifiMacHelper mac;
@@ -172,7 +183,6 @@ static void doSimulation() {
             "MinX", DoubleValue(50.0),
             "MinY", DoubleValue(50.0));
     robotMobility.Install(robot);
-
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
     // Construct the LAN                                                     //
@@ -229,7 +239,10 @@ static void doSimulation() {
     ///////////////////////////////////////////////////////////////////////////
 
     Config::ConnectWithoutContext("/NodeList/21/$ns3::MobilityModel/CourseChange", MakeCallback(&returnHomeCallback));
-
+    if(makeGraph == 1){
+        Config::ConnectWithoutContext("/NodeList/0/ApplicationList/0/$ns3::PacketSink/Rx", MakeCallback(&packetReceivedCallback));
+    }
+    
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
     Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
 
@@ -282,15 +295,18 @@ int main(int argc, char *argv[]) {
     cmd.Parse(argc, argv);
 
     // prvotne nastavenia v hl.funkcii
-    Gnuplot graf("graf1.svg");
-    graf.SetTerminal("svg");
-    graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
-    graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
-    graf.AppendExtra("set xrange[0:32]");
-    //data.SetTitle ("strata udajov");
-    data.SetStyle (Gnuplot2dDataset::LINES);
-    //data.SetErrorBars(Gnuplot2dDataset::Y);
-    
+    Gnuplot graf("graf" + std::to_string(makeGraph) + ".svg");
+    if(makeGraph){
+        graf.SetTerminal("svg");
+        if(makeGraph == 1){
+            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
+            graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
+            graf.AppendExtra("set xrange[0:32]");
+            //data.SetTitle ("strata udajov");
+            data.SetStyle (Gnuplot2dDataset::LINES);
+            //data.SetErrorBars(Gnuplot2dDataset::Y);
+        }
+    }
     // How many times will the simulation be run?
     uint64_t nRuns;
     if (makeGraph > 0 && makeGraph < 10)
@@ -308,7 +324,25 @@ int main(int argc, char *argv[]) {
 
     // perform simulations
     for (uint64_t i = 0; i < nRuns; i++) {
+        if(makeGraph == 1){
+            packetsReceived = 0;
+            arrivalTimes.clear();
+        }
         doSimulation();
+        for(int j = 0; j < arrivalTimes.size(); j++){
+            packetsPerSec[i].push_back(0);
+            for(int k = 0; k < simTime; k++){
+                if(arrivalTimes[j] >= k && arrivalTimes[j] < k+1){
+                    
+                    packetsPerSec[i][k]++;
+                    std::cout << "v rune " + std::to_string(i) + " packet cislo " + std::to_string(j) + " prisiel v sekunde " + std::to_string(k) + "\n";
+                    break;
+                }
+                std::cout << "j: " + std::to_string(j) + ", k: " + std::to_string(k) + "\n";
+            }
+        }
+        
+        std::cout << "packetsPerSec[0] ma velkost " + std::to_string(packetsPerSec[0].size()) + "\n";
     }
     
     if(makeGraph){
@@ -317,7 +351,8 @@ int main(int argc, char *argv[]) {
         std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
         graf.GenerateOutput (plotFile);
         plotFile.close ();
-        //if(system("gnuplot graf.plt"));
+        std::string pltName = "gnuplot graf" + std::to_string(makeGraph) + ".plt";
+        if(system(pltName.c_str()));
     }
     return 0;
 }
