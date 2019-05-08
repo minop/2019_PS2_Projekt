@@ -9,16 +9,16 @@
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/qos-txop.h"
 #include "ns3/packet-sink-helper.h"
-#include "ns3/olsr-helper.h"
 #include "ns3/csma-helper.h"
 #include "ns3/netanim-module.h"
+#include "ns3/aodv-module.h"
 
 using namespace ns3;
 
 void runSim(double);
 
-static void changeRobotSpeed(){
-    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed",StringValue("ns3::ConstantRandomVariable[Constant=40]"));
+static void changeRobotSpeed() {
+    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
 
 int main(int argc, char *argv[]) {
@@ -76,12 +76,11 @@ int main(int argc, char *argv[]) {
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
-    // TODO: maybe different routing? (AODV?)
-    // We enable OLSR (which will be consulted at a higher priority than the global routing) on the backbone ad hoc nodes
-    OlsrHelper olsr;
+    // We enable AODV routing on the wifi network
+    AodvHelper aodv;
     // Add the IPv4 protocol stack to the nodes in our container
     InternetStackHelper internet;
-    internet.SetRoutingHelper(olsr); // has effect on the next Install ()
+    internet.SetRoutingHelper(aodv); // has effect on the next Install ()
     internet.Install(wifiNodes);
 
     // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
@@ -114,11 +113,11 @@ int main(int argc, char *argv[]) {
     Ptr<UniformRandomVariable> allocatorRandVar = CreateObject<UniformRandomVariable>();
     allocatorRandVar->SetAttribute("Min", DoubleValue(-30.0));
     allocatorRandVar->SetAttribute("Max", DoubleValue(130.0));
-    
+
     RandomRectanglePositionAllocator waypointAllocator;
     waypointAllocator.SetX(allocatorRandVar);
     waypointAllocator.SetY(allocatorRandVar);
-    
+
     MobilityHelper robotMobility;
     robotMobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
             "Speed", StringValue("ns3::ConstantRandomVariable[Constant=20]"),
@@ -206,9 +205,9 @@ int main(int argc, char *argv[]) {
         //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
      *      */
-    
-    
-    Simulator::Schedule (Seconds (5.0), &changeRobotSpeed);
+
+
+    Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
