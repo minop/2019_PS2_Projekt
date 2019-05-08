@@ -64,18 +64,18 @@ int main(int argc, char *argv[]) {
     ///////////////////////////////////////////////////////////////////////////
 
     // Server Node
-    NodeContainer serverContainer;
-    serverContainer.Create(1);
-    Ptr<Node> server = serverContainer.Get(0);
+    NodeContainer serverNodes;
+    serverNodes.Create(1);
+    Ptr<Node> server = serverNodes.Get(0);
 
     // AP Nodes
     NodeContainer apNodes;
     apNodes.Create(20);
 
     // UAV Node
-    NodeContainer robotContainer;
-    robotContainer.Create(1);
-    Ptr<Node> robot = robotContainer.Get(0);
+    NodeContainer robotNodes;
+    robotNodes.Create(1);
+    Ptr<Node> robot = robotNodes.Get(0);
 
     // helper containers to install nodes more easily
     NodeContainer ethernetNodes;
@@ -154,18 +154,7 @@ int main(int argc, char *argv[]) {
     ipAddrs.SetBase("172.16.0.0", "255.255.255.0");
 
 
-    for (uint32_t i = 0; i < 21; ++i) {
-        //NS_LOG_INFO("Configuring local area network for backbone node " << i);
-        //
-        // Create a container to manage the nodes of the LAN.  We need
-        // two containers here; one with all of the new nodes, and one
-        // with all of the nodes including new and existing nodes
-        //
-        NodeContainer newLanNodes;
-        newLanNodes.Create(lanNodes - 1);
-        // Now, create the container with all nodes on this link
-        NodeContainer lan(wifiNodes.Get(i), newLanNodes);
-        //
+    //
         // Create the CSMA net devices and install them into the nodes in our
         // collection.
         //
@@ -173,36 +162,32 @@ int main(int argc, char *argv[]) {
         csma.SetChannelAttribute("DataRate",
                 DataRateValue(DataRate(5000000)));
         csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
-        NetDeviceContainer lanDevices = csma.Install(lan);
+        NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
         //
-        // Add the IPv4 protocol stack to the new LAN nodes
+        // Add the IPv4 protocol stack to the new LAN nodes (only server!)
         //
-        internet.Install(newLanNodes);
+        internet.Install(serverNodes);
         //
         // Assign IPv4 addresses to the device drivers (actually to the
         // associated IPv4 interfaces) we just created.
         //
         ipAddrs.Assign(lanDevices);
         //
-        // Assign a new network prefix for the next LAN, according to the
-        // network mask initialized above
-        //
-        ipAddrs.NewNetwork();
-        //
         // The new LAN nodes need a mobility model so we aggregate one
         // to each of the nodes we just finished building.
         //
+        /*
         MobilityHelper mobilityLan;
         Ptr<ListPositionAllocator> subnetAlloc =
                 CreateObject<ListPositionAllocator> ();
-        for (uint32_t j = 0; j < newLanNodes.GetN(); ++j) {
+        for (uint32_t j = 0; j < serverNodes.GetN(); ++j) {
             subnetAlloc->Add(Vector(0.0, j * 10 + 10, 0.0));
         }
         mobilityLan.PushReferenceMobilityModel(wifiNodes.Get(i));
         mobilityLan.SetPositionAllocator(subnetAlloc);
         mobilityLan.SetMobilityModel("ns3::ConstantPositionMobilityModel");
         mobilityLan.Install(newLanNodes);
-    }
+         * */
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -210,6 +195,7 @@ int main(int argc, char *argv[]) {
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
+    /*
     // Reset the address base-- all of the 802.11 networks will be in
     // the "10.0" address space
     ipAddrs.SetBase("10.0.0.0", "255.255.255.0");
@@ -280,6 +266,7 @@ int main(int argc, char *argv[]) {
                 "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.4]"));
         mobility.Install(stas);
     }
+     * */
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -296,29 +283,28 @@ int main(int argc, char *argv[]) {
     //NS_LOG_INFO("Create Applications.");
     uint16_t port = 9; // Discard port (RFC 863)
 
-    // Let's make sure that the user does not define too few nodes
-    // to make this example work.  We need lanNodes > 1  and infraNodes > 1
-    NS_ASSERT(lanNodes > 1 && infraNodes > 1);
     // We want the source to be the first node created outside of the backbone
     // Conveniently, the variable "backboneNodes" holds this node index value
-    Ptr<Node> appSource = NodeList::GetNode(21);
+    //Ptr<Node> appSource = NodeList::GetNode(21);
+    // appSource = robot
     // We want the sink to be the last node created in the topology.
-    uint32_t lastNodeIndex = 21 + 21 * (lanNodes - 1) + 21 * (infraNodes - 1) - 1;
-    Ptr<Node> appSink = NodeList::GetNode(lastNodeIndex);
+    //uint32_t lastNodeIndex = 21 + 21 * (lanNodes - 1) + 21 * (infraNodes - 1) - 1;
+    //Ptr<Node> appSink = NodeList::GetNode(lastNodeIndex);
+    // appSink = server
     // Let's fetch the IP address of the last node, which is on Ipv4Interface 1
-    Ipv4Address remoteAddr = appSink->GetObject<Ipv4> ()->GetAddress(1, 0).GetLocal();
+    Ipv4Address remoteAddr = server->GetObject<Ipv4> ()->GetAddress(1, 0).GetLocal();
 
     OnOffHelper onoff("ns3::UdpSocketFactory",
             Address(InetSocketAddress(remoteAddr, port)));
 
-    ApplicationContainer apps = onoff.Install(appSource);
+    ApplicationContainer apps = onoff.Install(robot);
     apps.Start(Seconds(3));
     apps.Stop(Seconds(stopTime - 1));
 
     // Create a packet sink to receive these packets
     PacketSinkHelper sink("ns3::UdpSocketFactory",
             InetSocketAddress(Ipv4Address::GetAny(), port));
-    apps = sink.Install(appSink);
+    apps = sink.Install(server);
     apps.Start(Seconds(3));
 
     ///////////////////////////////////////////////////////////////////////////
@@ -328,7 +314,7 @@ int main(int argc, char *argv[]) {
     ///////////////////////////////////////////////////////////////////////////
 
     //NS_LOG_INFO("Configure Tracing.");
-    CsmaHelper csma;
+    //CsmaHelper csma;
 
     //
     // Let's set up some ns-2-like ascii traces, using another helper class
@@ -344,7 +330,7 @@ int main(int argc, char *argv[]) {
     // pcap captures on the backbone wifi devices
     wifiPhy.EnablePcap("mixed-wireless", wifiDevices, false);
     // pcap trace on the application data sink
-    wifiPhy.EnablePcap("mixed-wireless", appSink->GetId(), 0);
+    wifiPhy.EnablePcap("mixed-wireless", server->GetId(), 0);
 
     if (useCourseChangeCallback == true) {
         //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
