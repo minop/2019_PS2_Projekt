@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
             graf.AppendExtra("set xrange[0:32]");
             //data.SetTitle ("strata udajov");
             data.SetStyle (Gnuplot2dDataset::LINES);
-            //data.SetErrorBars(Gnuplot2dDataset::Y);
+            data.SetErrorBars(Gnuplot2dDataset::Y);
         }
     }
     // How many times will the simulation be run?
@@ -401,6 +401,6 @@ void fillGnuplotData(std::vector<double> meassurements[]) {
         deviation /= 10;
         deviation = sqrt(deviation);
         
-        data.Add((i, average, deviation);
+        data.Add(i, average, deviation);
     }
 }
