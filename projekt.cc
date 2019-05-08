@@ -72,7 +72,12 @@ int main(int argc, char *argv[]) {
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
             "DataMode", StringValue("OfdmRate54Mbps"));
     YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default();
-    YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default();
+    //wifiPhy.Set("RxGain", DoubleValue(-99999999999999999));
+    //wifiPhy.Set("TxGain", DoubleValue(-99999999999999999));
+    YansWifiChannelHelper wifiChannel;
+    wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+    wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel",
+            "MaxRange", DoubleValue(15.0));
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
