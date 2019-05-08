@@ -12,6 +12,7 @@
 #include "ns3/olsr-helper.h"
 #include "ns3/csma-helper.h"
 #include "ns3/netanim-module.h"
+#include "ns3/rng-seed-manager.h"
 
 using namespace ns3;
 
@@ -19,11 +20,12 @@ void runSim(double);
 
 // global variables / simulation settings
 bool logRobotCallback = false;
-bool returningHome = false;
 bool doNetanim = true; // TODO: change to false
+bool makeGraphs = false;
 double simTime = 30.0;
 
 // position allocators accessible from callbacks
+bool returningHome = false;
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
 Ptr<RandomRectanglePositionAllocator> homeAllocator;
 
@@ -274,10 +276,25 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
     cmd.AddValue("simTime", "Total simulation time", simTime);
     cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
+    cmd.AddValue("makeGraphs", "Output graphs for the current settings", makeGraphs);
     cmd.Parse(argc, argv);
 
+    // How many times will the simulation be run?
+
+    uint64_t nRuns;
+    if (makeGraphs)
+        nRuns = 10;
+    else
+        nRuns = 1;
+
+    // Manage RNG seeds
+    RngSeedManager seedManager;
+    seedManager.SetRun(nRuns);
+
     // perform simulations
-    doSimulation();
+    for (uint64_t i = 0; i < nRuns; i++) {
+        doSimulation();
+    }
 
     return 0;
 }
