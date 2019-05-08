@@ -52,6 +52,8 @@ main(int argc, char *argv[]) {
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     wifiPhy.Set ("RxGain", DoubleValue (-10) );
     wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
+    wifiPhy.Set ("RxGain", DoubleValue (10000000));
+    wifiPhy.Set ("TxGain", DoubleValue (10000000));
 
     YansWifiChannelHelper wifiChannel;
     wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
