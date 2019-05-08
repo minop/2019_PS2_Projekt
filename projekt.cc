@@ -306,6 +306,14 @@ int main(int argc, char *argv[]) {
     for (uint64_t i = 0; i < nRuns; i++) {
         doSimulation();
     }
-
+    
+    if(makeGraphs){
+        //zaverecne spustenie
+        graf.AddDataset (data);
+        std::ofstream plotFile ("graf" + std::to_string(makeGraphs) + ".plt");
+        graf.GenerateOutput (plotFile);
+        plotFile.close ();
+        //if(system("gnuplot graf.plt"));
+    }
     return 0;
 }
