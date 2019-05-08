@@ -17,6 +17,11 @@ using namespace ns3;
 
 void runSim(double);
 
+static void changeRobotSpeed(){
+    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWalk2dMobilityModel/Speed",StringValue("ns3::UniformRandomVariable[Min=1000.0|Max=5000.0]"));
+    std::cout << "robot speed chaged!";
+}
+
 int main(int argc, char *argv[]) {
     // Local variables / Simulation properties
     uint32_t backboneNodes = 10;
@@ -197,6 +202,8 @@ int main(int argc, char *argv[]) {
     if (useCourseChangeCallback == true) {
         //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
+    
+    Simulator::Schedule (Seconds (5.0), &changeRobotSpeed);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
