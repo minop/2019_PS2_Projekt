@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
     cmd.AddValue("simTime", "Total simulation time", simTime);
     cmd.Parse(argc, argv);
-    
+
     // Server Node
     NodeContainer serverNodes;
     serverNodes.Create(1);
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     // Construct the wifi network                                            //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
-    
+
     // Create the wifi net devices and install them into the nodes in our container
     WifiHelper wifi;
     WifiMacHelper mac;
@@ -107,10 +107,20 @@ int main(int argc, char *argv[]) {
     serverMobility.Install(server);
 
     // robot Mobility
-    // TODO: randomWaypointModel
+    Ptr<UniformRandomVariable> allocatorRandVar = CreateObject<UniformRandomVariable>();
+    allocatorRandVar->SetAttribute("Min", DoubleValue(-30.0));
+    allocatorRandVar->SetAttribute("Max", DoubleValue(130.0));
+    
+    RandomRectanglePositionAllocator waypointAllocator;
+    waypointAllocator.SetX(allocatorRandVar);
+    waypointAllocator.SetY(allocatorRandVar);
+    
     MobilityHelper robotMobility;
-    robotMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-            "Bounds", RectangleValue(Rectangle(0, 100, 0, 100)));
+    robotMobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
+            "Speed", StringValue("ns3::ConstantRandomVariable[Constant=20]"),
+            "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.0]"),
+            "PositionAllocator", PointerValue(&waypointAllocator));
+
     robotMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(50.0),
             "MinY", DoubleValue(50.0));
@@ -131,7 +141,7 @@ int main(int argc, char *argv[]) {
             DataRateValue(DataRate(5000000)));
     csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
     NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
-    
+
     // Add the IPv4 protocol stack to the new LAN nodes (only the server is new!)
     internet.Install(serverNodes);
     // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
@@ -146,7 +156,7 @@ int main(int argc, char *argv[]) {
     // Create the OnOff application to send UDP datagrams of size
     // 210 bytes at a rate of 10 Kb/s, between two nodes
     // Data is sent from the robot to the server
-    
+
     uint16_t port = 9; // Discard port (RFC 863)
 
     // Let's fetch the IP address of the last node, which is on Ipv4Interface 1
@@ -191,17 +201,17 @@ int main(int argc, char *argv[]) {
     if (useCourseChangeCallback == true) {
         //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
-    */
+     */
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
     // NetAnim                                                               //
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
-    
+
     if (doNetanim) {
         AnimationInterface anim("netanim.xml");
-        
+
         // APs
         for (int i = 0; i < apNodes.GetN(); ++i) {
             anim.UpdateNodeColor(apNodes.Get(i), 0, 0, 0);
@@ -213,15 +223,14 @@ int main(int argc, char *argv[]) {
         // robot
         anim.UpdateNodeColor(robot, 255, 0, 0);
         anim.UpdateNodeDescription(robot, "Robot");
-        
+
         anim.EnablePacketMetadata();
-        
+
+        runSim(simTime);
+    } else {
         runSim(simTime);
     }
-    else {
-        runSim(simTime);
-    }
-    
+
     return 0;
 }
 
