@@ -7,6 +7,7 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/ssid.h"
 #include "ns3/netanim-module.h"
+#include "ns3/olsr-helper.h"
 
 using namespace ns3;
 
@@ -47,7 +48,30 @@ main(int argc, char *argv[]) {
     wifiNodes.Add(apNodes);
     wifiNodes.Add(robot);
 
+    // Setup physical layer
+    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+    wifiPhy.Set ("RxGain", DoubleValue (-10) );
+    wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
 
+    YansWifiChannelHelper wifiChannel;
+    wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+    wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+    wifiPhy.SetChannel (wifiChannel.Create ());
+    
+    // Set mac layer  
+    WifiMacHelper mac;
+    Ssid ssid = Ssid("ns-3-ssid");
+    mac.SetType("ns3::StaWifiMac",
+            "Ssid", SsidValue(ssid),
+            "ActiveProbing", BooleanValue(false));
+
+    // Wifi connection from robot to APs
+    // TODO: wifi attributes
+    WifiHelper wifi;
+    wifi.SetRemoteStationManager("ns3::AarfWifiManager");
+    NetDeviceContainer wifiDevices;
+    wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
+    
     // Ethernet connection from APs to server
     CsmaHelper ethernet;
     // TODO: ethernet attributes
@@ -56,40 +80,6 @@ main(int argc, char *argv[]) {
 
     NetDeviceContainer ethernetDevices;
     ethernetDevices = ethernet.Install(ethernetNodes);
-
-    // Wifi connection from robot to APs
-    // TODO: wifi attributes
-    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
-    YansWifiPhyHelper phy = YansWifiPhyHelper::Default();
-    phy.SetChannel(channel.Create());
-
-    WifiHelper wifi;
-    
-    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
-  // set it to zero; otherwise, gain will be added
-  wifiPhy.Set ("RxGain", DoubleValue (-10) );
-  // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
-  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
-
-  YansWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
-  wifiPhy.SetChannel (wifiChannel.Create ());
-    
-    wifi.SetRemoteStationManager("ns3::AarfWifiManager");
-
-    WifiMacHelper mac;
-    Ssid ssid = Ssid("ns-3-ssid");
-    mac.SetType("ns3::StaWifiMac",
-            "Ssid", SsidValue(ssid),
-            "ActiveProbing", BooleanValue(false));
-
-    NetDeviceContainer wifiDevices;
-    wifiDevices = wifi.Install(phy, mac, wifiNodes);
-
-    mac.SetType("ns3::ApWifiMac",
-            "Ssid", SsidValue(ssid));
-
 
     // AP Mobility
     MobilityHelper apMobility;
@@ -122,6 +112,13 @@ main(int argc, char *argv[]) {
             "MinY", DoubleValue(50.0));
     robotMobility.Install(robot);
 
+    // Enable OLSR
+    OlsrHelper olsr;
+    Ipv4StaticRoutingHelper staticRouting;
+
+    Ipv4ListRoutingHelper list;
+    list.Add (staticRouting, 0);
+    list.Add (olsr, 10);
 
     // InternetStack
     InternetStackHelper stack;
