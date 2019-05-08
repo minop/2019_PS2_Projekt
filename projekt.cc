@@ -14,16 +14,19 @@
 #include "ns3/netanim-module.h"
 #include "ns3/gnuplot.h"
 #include "ns3/rng-seed-manager.h"
+#include "ns3/aodv-helper.h"
 
 using namespace ns3;
 
-void runSim(double);
+void runSim(int);
+void fillGnuplotData(std::vector<int> meassurements[]);
+void fillGnuplotData(std::vector<double> meassurements[]);
 
 // global variables / simulation settings
 bool logRobotCallback = false;
-bool doNetanim = true; // TODO: change to false
+bool doNetanim = false;
 int makeGraph = 0;
-double simTime = 30.0;
+int simTime = 30;
 Gnuplot2dDataset data;
 int packetsReceived = 0;
 std::vector<double> arrivalTimes = {};
@@ -37,9 +40,9 @@ void packetReceivedCallback(Ptr< const Packet > packet, const Address &address){
     packetsReceived++;
     arrivalTimes.push_back(Simulator::Now().GetSeconds());
     
-    data.Add(Simulator::Now().GetSeconds(), packetsReceived);
+    //data.Add(Simulator::Now().GetSeconds(), packetsReceived);
     
-    //std::cout << "Ive received a packet!\n";
+    //std::cout << "Ive received a packet! packet number " + std::to_string(packetsReceived) + "\n";
 }
 
 void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
@@ -69,6 +72,10 @@ void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
     }
 }
 
+void macRecievePacketCallback(Ptr< const Packet> packet) {
+    // TODO: count the packets somewhere
+}
+
 static void changeRobotSpeed() {
     Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
@@ -77,7 +84,7 @@ static void changePingFrequency() {
     Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
 }
 
-static void doSimulation() {
+static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     // Server Node
     NodeContainer serverNodes;
     serverNodes.Create(1);
@@ -85,7 +92,6 @@ static void doSimulation() {
     
     // AP Nodes
     NodeContainer apNodes;
-    std::cout << "je toto posledny vypis?\n";
     apNodes.Create(20);
     
     // UAV Node
@@ -114,8 +120,6 @@ static void doSimulation() {
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
             "DataMode", StringValue("OfdmRate54Mbps"));
     YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default();
-    //wifiPhy.Set("RxGain", DoubleValue(-99999999999999999));
-    //wifiPhy.Set("TxGain", DoubleValue(-99999999999999999));
     YansWifiChannelHelper wifiChannel;
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
     wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel",
@@ -123,12 +127,15 @@ static void doSimulation() {
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
-    // TODO: maybe different routing? (AODV?)
-    // We enable OLSR (which will be consulted at a higher priority than the global routing) on the backbone ad hoc nodes
-    OlsrHelper olsr;
     // Add the IPv4 protocol stack to the nodes in our container
     InternetStackHelper internet;
-    internet.SetRoutingHelper(olsr); // has effect on the next Install ()
+    if (olsrRouting) {
+        OlsrHelper olsr;
+        internet.SetRoutingHelper(olsr);
+    } else {
+        AodvHelper aodv;
+        internet.SetRoutingHelper(aodv);
+    }
     internet.Install(wifiNodes);
 
     // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
@@ -138,7 +145,6 @@ static void doSimulation() {
 
     // APs Mobility
     MobilityHelper apMobility;
-    // TODO: final physical layout of the nodes
     apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(10.0),
@@ -195,7 +201,7 @@ static void doSimulation() {
     // Create the CSMA net devices and install them into the nodes in our collection.
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate",
-            DataRateValue(DataRate(5000000)));
+            DataRateValue(DataRate(dataRatekb * 1000)));
     csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
     NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
 
@@ -242,9 +248,11 @@ static void doSimulation() {
     if(makeGraph == 1){
         Config::ConnectWithoutContext("/NodeList/0/ApplicationList/0/$ns3::PacketSink/Rx", MakeCallback(&packetReceivedCallback));
     }
+    // TODO: should only be registered if some graphs are being made (to speed thing up)
+    Config::ConnectWithoutContext("/NodeList/0/DeviceList/0/$ns3::CsmaNetDevice/MacRx", MakeCallback(&macRecievePacketCallback));
     
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
-    Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
+    Simulator::Schedule(Seconds(15.0), &changePingFrequency);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -275,7 +283,7 @@ static void doSimulation() {
     }
 }
 
-void runSim(double simTime) {
+void runSim(int simTime) {
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
     Simulator::Destroy();
@@ -311,7 +319,7 @@ int main(int argc, char *argv[]) {
     uint64_t nRuns;
     if (makeGraph > 0 && makeGraph < 10)
         nRuns = 10;
-    else if(makeGraph == 0)
+    else if (makeGraph == 0)
         nRuns = 1;
     else {
         std::cerr << "makeGraph has to be from interval <0; 9>" << std::endl;
@@ -322,30 +330,41 @@ int main(int argc, char *argv[]) {
     RngSeedManager seedManager;
     seedManager.SetRun(nRuns);
 
-    // perform simulations
+    // Default simulation parameters
+    uint64_t dataRatekb = 5000; // in kilo bits
+    bool olsrRouting = false; // false = AODV
+
+    // Perform simulations
     for (uint64_t i = 0; i < nRuns; i++) {
         if(makeGraph == 1){
             packetsReceived = 0;
             arrivalTimes.clear();
         }
-        doSimulation();
+        //std::cout << "packetsPerSec[0] ma velkost " + std::to_string(packetsPerSec[0].size()) + ", arrivalTimes ma velkost " + std::to_string(arrivalTimes.size()) + "\n";
+        doSimulation(olsrRouting, dataRatekb);
+        
         for(int j = 0; j < arrivalTimes.size(); j++){
-            packetsPerSec[i].push_back(0);
             for(int k = 0; k < simTime; k++){
+                if(j == 0){
+                        //std::cout << "prave som pushol do packetsPerSec[0] \n";
+                        packetsPerSec[i].push_back(0);
+                    }
                 if(arrivalTimes[j] >= k && arrivalTimes[j] < k+1){
-                    
                     packetsPerSec[i][k]++;
-                    std::cout << "v rune " + std::to_string(i) + " packet cislo " + std::to_string(j) + " prisiel v sekunde " + std::to_string(k) + "\n";
-                    break;
+                    //std::cout << "v rune " + std::to_string(i) + " packet cislo " + std::to_string(j) + " prisiel v sekunde " + std::to_string(k) + "\n";
+                    if(j != 0){
+                        break;
+                    }
                 }
-                std::cout << "j: " + std::to_string(j) + ", k: " + std::to_string(k) + "\n";
+                //std::cout << "j: " + std::to_string(j) + ", k: " + std::to_string(k) + "\n";
             }
         }
         
-        std::cout << "packetsPerSec[0] ma velkost " + std::to_string(packetsPerSec[0].size()) + "\n";
+        //std::cout << "packetsPerSec[0] ma velkost " + std::to_string(packetsPerSec[0].size()) + ", arrivalTimes ma velkost " + std::to_string(arrivalTimes.size()) + "\n";
     }
-    
-    if(makeGraph){
+
+    if (makeGraph) {
+        fillGnuplotData(packetsPerSec);
         //zaverecne spustenie
         graf.AddDataset (data);
         std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
@@ -355,4 +374,33 @@ int main(int argc, char *argv[]) {
         if(system(pltName.c_str()));
     }
     return 0;
+}
+
+void fillGnuplotData(std::vector<int> meassurements[]) {
+    // convert the integers to doubles and call the other function
+    std::vector<double> doubles[10];
+    for (int i = 0; i < 10; ++i) {
+        doubles[i] = std::vector<double>(meassurements[i].begin(), meassurements[i].end());
+    }
+    fillGnuplotData(doubles);
+}
+
+void fillGnuplotData(std::vector<double> meassurements[]) {
+    for(int i = 0; i < meassurements[0].size(); ++i) {
+        double average = 0.0;
+        for(int j = 0; j < 10; ++j) {
+            average += meassurements[j].at(i);
+        }
+        average /= 10;
+        
+        double deviation = 0.0;
+        for(int j = 0; j < 10; ++j) {
+            double k = meassurements[j].at(i) - average;
+            deviation += k*k;
+        }
+        deviation /= 10;
+        deviation = sqrt(deviation);
+        
+        data.Add((i, average, deviation);
+    }
 }
