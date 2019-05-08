@@ -14,6 +14,7 @@
 #include "ns3/netanim-module.h"
 #include "ns3/gnuplot.h"
 #include "ns3/rng-seed-manager.h"
+#include "ns3/aodv-helper.h"
 
 using namespace ns3;
 
@@ -66,7 +67,7 @@ static void changePingFrequency() {
     Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
 }
 
-static void doSimulation() {
+static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     // Server Node
     NodeContainer serverNodes;
     serverNodes.Create(1);
@@ -103,8 +104,6 @@ static void doSimulation() {
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
             "DataMode", StringValue("OfdmRate54Mbps"));
     YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default();
-    //wifiPhy.Set("RxGain", DoubleValue(-99999999999999999));
-    //wifiPhy.Set("TxGain", DoubleValue(-99999999999999999));
     YansWifiChannelHelper wifiChannel;
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
     wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel",
@@ -112,12 +111,16 @@ static void doSimulation() {
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
-    // TODO: maybe different routing? (AODV?)
-    // We enable OLSR (which will be consulted at a higher priority than the global routing) on the backbone ad hoc nodes
-    OlsrHelper olsr;
     // Add the IPv4 protocol stack to the nodes in our container
     InternetStackHelper internet;
-    internet.SetRoutingHelper(olsr); // has effect on the next Install ()
+    if(olsrRouting) {
+        OlsrHelper olsr;
+        internet.SetRoutingHelper(olsr);
+    }
+    else {
+        AodvHelper aodv;
+        internet.SetRoutingHelper(aodv);
+    }
     internet.Install(wifiNodes);
 
     // Assign IPv4 addresses to the device drivers (actually to the associated IPv4 interfaces) we just created.
@@ -127,7 +130,6 @@ static void doSimulation() {
 
     // APs Mobility
     MobilityHelper apMobility;
-    // TODO: final physical layout of the nodes
     apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(10.0),
@@ -185,7 +187,7 @@ static void doSimulation() {
     // Create the CSMA net devices and install them into the nodes in our collection.
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate",
-            DataRateValue(DataRate(5000000)));
+            DataRateValue(DataRate(dataRatekb*1000)));
     csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
     NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
 
@@ -306,9 +308,13 @@ int main(int argc, char *argv[]) {
     RngSeedManager seedManager;
     seedManager.SetRun(nRuns);
 
-    // perform simulations
+    // Default simulation parameters
+    uint64_t dataRatekb = 5000; // in kilo bits
+    bool olsrRouting = false;    // false = AODV
+    
+    // Perform simulations
     for (uint64_t i = 0; i < nRuns; i++) {
-        doSimulation();
+        doSimulation(olsrRouting, dataRatekb);
     }
     
     if(makeGraph){
@@ -317,7 +323,7 @@ int main(int argc, char *argv[]) {
         std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
         graf.GenerateOutput (plotFile);
         plotFile.close ();
-        //if(system("gnuplot graf.plt"));
+        if(system("gnuplot graf.plt"));
     }
     return 0;
 }
