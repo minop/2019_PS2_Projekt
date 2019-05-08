@@ -21,7 +21,7 @@ void runSim(double);
 // global variables / simulation settings
 bool logRobotCallback = false;
 bool doNetanim = true; // TODO: change to false
-bool makeGraphs = false;
+int makeGraph = 0;
 double simTime = 30.0;
 
 // position allocators accessible from callbacks
@@ -276,15 +276,19 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
     cmd.AddValue("simTime", "Total simulation time", simTime);
     cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
-    cmd.AddValue("makeGraphs", "Output graphs for the current settings", makeGraphs);
+    cmd.AddValue("graph", "[0-9], which graph should be generated; 0 for none", makeGraph);
     cmd.Parse(argc, argv);
 
     // How many times will the simulation be run?
     uint64_t nRuns;
-    if (makeGraphs)
+    if (makeGraph > 0 && makeGraph < 10)
         nRuns = 10;
-    else
+    else if(makeGraph == 0)
         nRuns = 1;
+    else {
+        std::cerr << "makeGraphs has to be from interval <0; 9>" << std::endl;
+        return -1;
+    }
 
     // Manage RNG seeds
     RngSeedManager seedManager;
