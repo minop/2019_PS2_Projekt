@@ -21,6 +21,10 @@ static void changeRobotSpeed(){
     Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed",StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
 
+static void changePingFrequency() {
+    Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
+}
+
 int main(int argc, char *argv[]) {
     // Local variables / Simulation properties
     bool doNetanim = true; // TODO: change to false
@@ -206,9 +210,9 @@ int main(int argc, char *argv[]) {
         //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
      *      */
-    
-    
-    Simulator::Schedule (Seconds (5.0), &changeRobotSpeed);
+
+    Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
+    Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
