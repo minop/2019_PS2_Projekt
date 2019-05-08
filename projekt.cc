@@ -12,6 +12,7 @@
 #include "ns3/olsr-helper.h"
 #include "ns3/csma-helper.h"
 #include "ns3/netanim-module.h"
+#include "ns3/gnuplot.h"
 
 using namespace ns3;
 
@@ -22,6 +23,7 @@ bool logRobotCallback = false;
 bool returningHome = false;
 bool doNetanim = true; // TODO: change to false
 double simTime = 30.0;
+Gnuplot2dDataset data;
 
 // position allocators accessible from callbacks
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
@@ -276,6 +278,16 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
     cmd.Parse(argc, argv);
 
+    // prvotne nastavenia v hl.funkcii
+    Gnuplot graf("graf1.svg");
+    graf.SetTerminal("svg");
+    graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
+    graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
+    graf.AppendExtra("set xrange[0:32]");
+    //data.SetTitle ("strata udajov");
+    data.SetStyle (Gnuplot2dDataset::LINES);
+    //data.SetErrorBars(Gnuplot2dDataset::Y);
+    
     // perform simulations
     doSimulation();
 
