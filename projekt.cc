@@ -240,7 +240,7 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     Config::ConnectWithoutContext("/NodeList/0/DeviceList/0/$ns3::CsmaNetDevice/MacRx", MakeCallback(&macRecievePacketCallback));
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
-    Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
+    Simulator::Schedule(Seconds(15.0), &changePingFrequency);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
