@@ -11,7 +11,7 @@
 #include "ns3/packet-sink-helper.h"
 #include "ns3/olsr-helper.h"
 #include "ns3/csma-helper.h"
-#include "ns3/animation-interface.h"
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
@@ -142,6 +142,36 @@ int main(int argc, char *argv[]) {
             "Speed", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
             "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.2]"));
     mobility.Install(backbone);
+    
+    MobilityHelper apMobility;
+    // TODO: final physical layout of the nodes
+    apMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    apMobility.SetPositionAllocator("ns3::GridPositionAllocator",
+            "MinX", DoubleValue(10.0),
+            "MinY", DoubleValue(10.0),
+            "DeltaX", DoubleValue(20.0),
+            "DeltaY", DoubleValue(20.0),
+            "GridWidth", UintegerValue(5),
+            "LayoutType", StringValue("RowFirst"));
+    apMobility.Install(apNodes);
+
+    // server Mobility
+    MobilityHelper serverMobility;
+    serverMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    serverMobility.SetPositionAllocator("ns3::GridPositionAllocator",
+            "MinX", DoubleValue(200.0),
+            "MinY", DoubleValue(50.0));
+    serverMobility.Install(server);
+
+    // robot Mobility
+    // TODO: some mobility
+    MobilityHelper robotMobility;
+    robotMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+            "Bounds", RectangleValue(Rectangle(0, 100, 0, 100)));
+    robotMobility.SetPositionAllocator("ns3::GridPositionAllocator",
+            "MinX", DoubleValue(50.0),
+            "MinY", DoubleValue(50.0));
+    robotMobility.Install(robot);
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -350,7 +380,7 @@ int main(int argc, char *argv[]) {
         //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
 
-    AnimationInterface anim("mixed-wireless.xml");
+    AnimationInterface anim("netanim.xml");
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
