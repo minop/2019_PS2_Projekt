@@ -17,12 +17,44 @@ using namespace ns3;
 
 void runSim(double);
 
-static void changeRobotSpeed(){
-    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed",StringValue("ns3::ConstantRandomVariable[Constant=40]"));
+bool logRobotCallback = false;
+bool returningHome = false;
+Ptr<RandomRectanglePositionAllocator> waypointAllocator;
+Ptr<RandomRectanglePositionAllocator> homeAllocator;
+
+static void changeRobotSpeed() {
+    Config::Set("NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/Speed", StringValue("ns3::ConstantRandomVariable[Constant=40]"));
 }
 
 static void changePingFrequency() {
     Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
+}
+
+void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
+    Vector pos = mobModel->GetPosition();
+
+    if (logRobotCallback)
+        std::cout << "[" << Simulator::Now().GetSeconds() << "s] " << pos.x << "; " << pos.y << std::endl;
+
+    if (!returningHome) {
+        // is the robot out of bounds?
+        if (pos.x < 0.0 || pos.x > 100.0 || pos.y < 0.0 || pos.y > 80.0) {
+            returningHome = true;
+            Config::Set("/NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/PositionAllocator", PointerValue(homeAllocator));
+
+            if (logRobotCallback)
+                std::cout << "[" << Simulator::Now().GetSeconds() << "s] " << "robot has left AP reach and will return home." << std::endl;
+        }
+    } else {
+        // has the robot returned home?
+        if (pos.x > 49.5 && pos.x < 50.5 && pos.y > 49.5 && pos.y < 50.5) {
+            returningHome = false;
+            Config::Set("/NodeList/21/$ns3::MobilityModel/$ns3::RandomWaypointMobilityModel/PositionAllocator", PointerValue(waypointAllocator));
+
+            if (logRobotCallback)
+                std::cout << "[" << Simulator::Now().GetSeconds() << "s] " << "robot has returned home and will begin roaming again." << std::endl;
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -36,8 +68,9 @@ int main(int argc, char *argv[]) {
 
     // CommandLine arguments
     CommandLine cmd;
-    cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
+    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
     cmd.AddValue("simTime", "Total simulation time", simTime);
+    cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
     cmd.Parse(argc, argv);
 
     // Server Node
@@ -79,8 +112,8 @@ int main(int argc, char *argv[]) {
     //wifiPhy.Set("RxGain", DoubleValue(-99999999999999999));
     //wifiPhy.Set("TxGain", DoubleValue(-99999999999999999));
     YansWifiChannelHelper wifiChannel;
-    wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-    wifiChannel.AddPropagationLoss ("ns3::RangePropagationLossModel",
+    wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
+    wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel",
             "MaxRange", DoubleValue(15.0));
     wifiPhy.SetChannel(wifiChannel.Create());
     NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
@@ -123,16 +156,23 @@ int main(int argc, char *argv[]) {
     Ptr<UniformRandomVariable> allocatorRandVar = CreateObject<UniformRandomVariable>();
     allocatorRandVar->SetAttribute("Min", DoubleValue(-30.0));
     allocatorRandVar->SetAttribute("Max", DoubleValue(130.0));
-    
-    RandomRectanglePositionAllocator waypointAllocator;
-    waypointAllocator.SetX(allocatorRandVar);
-    waypointAllocator.SetY(allocatorRandVar);
-    
+
+    waypointAllocator = CreateObject<RandomRectanglePositionAllocator>();
+    waypointAllocator->SetX(allocatorRandVar);
+    waypointAllocator->SetY(allocatorRandVar);
+
+    Ptr<ConstantRandomVariable> homeRandVar = CreateObject<ConstantRandomVariable>();
+    homeRandVar->SetAttribute("Constant", DoubleValue(50.0));
+
+    homeAllocator = CreateObject<RandomRectanglePositionAllocator>();
+    homeAllocator->SetX(homeRandVar);
+    homeAllocator->SetY(homeRandVar);
+
     MobilityHelper robotMobility;
     robotMobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
-            "Speed", StringValue("ns3::ConstantRandomVariable[Constant=20]"),
+            "Speed", StringValue("ns3::ConstantRandomVariable[Constant=20.0]"),
             "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.0]"),
-            "PositionAllocator", PointerValue(&waypointAllocator));
+            "PositionAllocator", PointerValue(waypointAllocator));
 
     robotMobility.SetPositionAllocator("ns3::GridPositionAllocator",
             "MinX", DoubleValue(50.0),
@@ -194,12 +234,7 @@ int main(int argc, char *argv[]) {
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
-    // TODO: proper callbacks
-    /*
-    if (useCourseChangeCallback == true) {
-        //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
-    }
-     *      */
+    Config::ConnectWithoutContext("/NodeList/21/$ns3::MobilityModel/CourseChange", MakeCallback(&returnHomeCallback));
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
     Simulator::Schedule(Seconds(15.0), &changeRobotSpeed);
