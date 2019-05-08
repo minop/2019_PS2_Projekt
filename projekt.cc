@@ -19,24 +19,17 @@ void runSim(double);
 
 int main(int argc, char *argv[]) {
     // Local variables / Simulation properties
-    uint32_t backboneNodes = 10;
-    uint32_t infraNodes = 2;
-    uint32_t lanNodes = 2;
-    uint32_t stopTime = 20;
-    bool useCourseChangeCallback = false;
+    bool doNetanim = true; // TODO: change to false
+    double simTime = 30.0;
 
     // Simulation defaults are typically set before command line arguments are parsed.
     Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("1472"));
     Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
 
+    // CommandLine arguments
     CommandLine cmd;
-    cmd.AddValue("backboneNodes", "number of backbone nodes", backboneNodes);
-    cmd.AddValue("infraNodes", "number of leaf nodes", infraNodes);
-    cmd.AddValue("lanNodes", "number of LAN nodes", lanNodes);
-    cmd.AddValue("stopTime", "simulation stop time (seconds)", stopTime);
-    cmd.AddValue("useCourseChangeCallback", "whether to enable course change tracing", useCourseChangeCallback);
-
-    // The system global variables and the local values added to the argument system can be overridden by command line arguments by using this call.
+    cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
+    cmd.AddValue("simTime", "Total simulation time", simTime);
     cmd.Parse(argc, argv);
     
     // Server Node
@@ -164,7 +157,7 @@ int main(int argc, char *argv[]) {
 
     ApplicationContainer apps = onoff.Install(robot);
     apps.Start(Seconds(3));
-    apps.Stop(Seconds(stopTime - 1));
+    apps.Stop(Seconds(simTime - 1));
 
     // Create a packet sink to receive these packets
     PacketSinkHelper sink("ns3::UdpSocketFactory",
@@ -194,9 +187,11 @@ int main(int argc, char *argv[]) {
     wifiPhy.EnablePcap("mixed-wireless", server->GetId(), 0);
 
     // TODO: proper callbacks
+    /*
     if (useCourseChangeCallback == true) {
-        //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
+        //Config::Connect("/NodeList/* /$ns3::MobilityModel/CourseChange", MakeCallback(&CourseChangeCallback));
     }
+    */
 
     ///////////////////////////////////////////////////////////////////////////
     //                                                                       //
@@ -204,30 +199,6 @@ int main(int argc, char *argv[]) {
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
     
-    AnimationInterface anim("netanim.xml");
-
-    ///////////////////////////////////////////////////////////////////////////
-    //                                                                       //
-    // Run simulation                                                        //
-    //                                                                       //
-    ///////////////////////////////////////////////////////////////////////////
-
-    //NS_LOG_INFO("Run Simulation.");
-    Simulator::Stop(Seconds(stopTime));
-    Simulator::Run();
-    Simulator::Destroy();
-
-    /*
-    bool doNetanim = false;
-    double simTime = 10.0;
-
-    // CommandLine arguments
-    CommandLine cmd;
-    cmd.AddValue("doNetanim", "Should NetAnim file be generated", doNetanim);
-    cmd.AddValue("simTime", "Total simulation time", simTime);
-    cmd.Parse(argc, argv);
-
-    // Netanim
     if (doNetanim) {
         AnimationInterface anim("netanim.xml");
         
@@ -250,7 +221,7 @@ int main(int argc, char *argv[]) {
     else {
         runSim(simTime);
     }
-     */
+    
     return 0;
 }
 
