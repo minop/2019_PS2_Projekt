@@ -63,12 +63,35 @@ int main(int argc, char *argv[]) {
     //                                                                       //
     ///////////////////////////////////////////////////////////////////////////
 
+    // Server Node
+    NodeContainer serverContainer;
+    serverContainer.Create(1);
+    Ptr<Node> server = serverContainer.Get(0);
+
+    // AP Nodes
+    NodeContainer apNodes;
+    apNodes.Create(20);
+
+    // UAV Node
+    NodeContainer robotContainer;
+    robotContainer.Create(1);
+    Ptr<Node> robot = robotContainer.Get(0);
+
+    // helper containers to install nodes more easily
+    NodeContainer ethernetNodes;
+    ethernetNodes.Add(server);
+    ethernetNodes.Add(apNodes);
+
+    NodeContainer wifiNodes;
+    wifiNodes.Add(apNodes);
+    wifiNodes.Add(robot);
+    
     //
     // Create a container to manage the nodes of the adhoc (backbone) network.
     // Later we'll create the rest of the nodes we'll need.
     //
-    NodeContainer backbone;
-    backbone.Create(backboneNodes);
+    //NodeContainer backbone;
+    //backbone.Create(backboneNodes);
     //
     // Create the backbone wifi net devices and install them into the nodes in
     // our container
@@ -81,7 +104,7 @@ int main(int argc, char *argv[]) {
     YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default();
     YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default();
     wifiPhy.SetChannel(wifiChannel.Create());
-    NetDeviceContainer backboneDevices = wifi.Install(wifiPhy, mac, backbone);
+    NetDeviceContainer wifiDevices = wifi.Install(wifiPhy, mac, wifiNodes);
 
     // We enable OLSR (which will be consulted at a higher priority than
     // the global routing) on the backbone ad hoc nodes
@@ -351,28 +374,7 @@ int main(int argc, char *argv[]) {
     cmd.Parse(argc, argv);
 
 
-    // Server Node
-    NodeContainer snc;
-    snc.Create(1);
-    Ptr<Node> server = snc.Get(0);
-
-    // AP Nodes
-    NodeContainer apNodes;
-    apNodes.Create(20);
-
-    // UAV Node
-    NodeContainer rnc;
-    rnc.Create(1);
-    Ptr<Node> robot = rnc.Get(0);
-
-    // helper containers to install nodes more easily
-    NodeContainer ethernetNodes;
-    ethernetNodes.Add(server);
-    ethernetNodes.Add(apNodes);
-
-    NodeContainer wifiNodes;
-    wifiNodes.Add(apNodes);
-    wifiNodes.Add(robot);
+    
 
 
     // Ethernet connection from APs to server
