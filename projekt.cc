@@ -19,10 +19,12 @@
 using namespace ns3;
 
 void runSim(double);
+void fillGnuplotData(std::vector<int> meassurements[]);
+void fillGnuplotData(std::vector<double> meassurements[]);
 
 // global variables / simulation settings
 bool logRobotCallback = false;
-bool doNetanim = true; // TODO: change to false
+bool doNetanim = false;
 int makeGraph = 0;
 double simTime = 30.0;
 Gnuplot2dDataset data;
@@ -117,11 +119,10 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
 
     // Add the IPv4 protocol stack to the nodes in our container
     InternetStackHelper internet;
-    if(olsrRouting) {
+    if (olsrRouting) {
         OlsrHelper olsr;
         internet.SetRoutingHelper(olsr);
-    }
-    else {
+    } else {
         AodvHelper aodv;
         internet.SetRoutingHelper(aodv);
     }
@@ -191,7 +192,7 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     // Create the CSMA net devices and install them into the nodes in our collection.
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate",
-            DataRateValue(DataRate(dataRatekb*1000)));
+            DataRateValue(DataRate(dataRatekb * 1000)));
     csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
     NetDeviceContainer lanDevices = csma.Install(ethernetNodes);
 
@@ -293,17 +294,17 @@ int main(int argc, char *argv[]) {
     Gnuplot graf("graf1.svg");
     graf.SetTerminal("svg");
     graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
-    graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
+    graf.SetLegend("Cas [s]", "Mnozstvo prijatych paketov");
     graf.AppendExtra("set xrange[0:32]");
     //data.SetTitle ("strata udajov");
-    data.SetStyle (Gnuplot2dDataset::LINES);
-    //data.SetErrorBars(Gnuplot2dDataset::Y);
-    
+    data.SetStyle(Gnuplot2dDataset::LINES);
+    data.SetErrorBars(Gnuplot2dDataset::Y);
+
     // How many times will the simulation be run?
     uint64_t nRuns;
     if (makeGraph > 0 && makeGraph < 10)
         nRuns = 10;
-    else if(makeGraph == 0)
+    else if (makeGraph == 0)
         nRuns = 1;
     else {
         std::cerr << "makeGraph has to be from interval <0; 9>" << std::endl;
@@ -316,20 +317,49 @@ int main(int argc, char *argv[]) {
 
     // Default simulation parameters
     uint64_t dataRatekb = 5000; // in kilo bits
-    bool olsrRouting = false;    // false = AODV
-    
+    bool olsrRouting = false; // false = AODV
+
     // Perform simulations
     for (uint64_t i = 0; i < nRuns; i++) {
         doSimulation(olsrRouting, dataRatekb);
     }
-    
-    if(makeGraph){
+
+    if (makeGraph) {
         //zaverecne spustenie
-        graf.AddDataset (data);
-        std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
-        graf.GenerateOutput (plotFile);
-        plotFile.close ();
-        if(system("gnuplot graf.plt"));
+        graf.AddDataset(data);
+        std::ofstream plotFile("graf" + std::to_string(makeGraph) + ".plt");
+        graf.GenerateOutput(plotFile);
+        plotFile.close();
+        if (system("gnuplot graf.plt"));
     }
     return 0;
+}
+
+void fillGnuplotData(std::vector<int> meassurements[]) {
+    // convert the integers to doubles and call the other function
+    std::vector<double> doubles[10];
+    for (int i = 0; i < 10; ++i) {
+        doubles[i] = std::vector<double>(meassurements[i].begin(), meassurements[i].end());
+    }
+    fillGnuplotData(doubles);
+}
+
+void fillGnuplotData(std::vector<double> meassurements[]) {
+    for(int i = 0; i < meassurements[0].size(); ++i) {
+        double average = 0.0;
+        for(int j = 0; j < 10; ++j) {
+            average += meassurements[j].at(i);
+        }
+        average /= 10;
+        
+        double deviation = 0.0;
+        for(int j = 0; j < 10; ++j) {
+            double k = meassurements[j].at(i) - average;
+            deviation += k*k;
+        }
+        deviation /= 10;
+        deviation = sqrt(deviation);
+        
+        data.Add(i, average, deviation);
+    }
 }
