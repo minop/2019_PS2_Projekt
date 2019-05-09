@@ -55,10 +55,6 @@ Ptr<RandomRectanglePositionAllocator> homeAllocator;
 void packetReceivedCallback(Ptr< const Packet > packet, const Address &address) {
     packetsReceived++;
     arrivalTimes.push_back(Simulator::Now().GetSeconds());
-
-    //data.Add(Simulator::Now().GetSeconds(), packetsReceived);
-
-    //std::cout << "Ive received a packet! packet number " + std::to_string(packetsReceived) + "\n";
 }
 
 void returnHomeCallback(Ptr< const MobilityModel> mobModel) {
