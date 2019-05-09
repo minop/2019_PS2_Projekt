@@ -361,7 +361,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 9:
                 graf.SetTitle("Graf zavislosti poctu prijatych paketov od rychlosti ethernetovej linky");
-                graf.SetLegend("Rychlost [kbit]", "pocet prijatych paketov za celu simulaciu");
+                graf.SetLegend("Rychlost [bit/s]", "pocet prijatych paketov za celu simulaciu");
                 data.SetTitle("pocet paketov (AODV)");
                 break;
         }
