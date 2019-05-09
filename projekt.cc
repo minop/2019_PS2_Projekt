@@ -15,12 +15,15 @@
 #include "ns3/gnuplot.h"
 #include "ns3/rng-seed-manager.h"
 #include "ns3/aodv-helper.h"
+#include <math.h>
 
 using namespace ns3;
 
 void runSim(int);
 void fillGnuplotData(std::vector<int> meassurements[]);
 void fillGnuplotData(std::vector<double> meassurements[]);
+void fillGnuplotData(std::vector<int> meassurements[], std::vector<double> xValues);
+void fillGnuplotData(std::vector<double> meassurements[], std::vector<double> xValues);
 void aggregatePacketCount(std::vector<double> packetArrivalTimes, std::vector<int> meassurementsArray[], uint64_t index);
 
 // global variables / simulation settings
@@ -40,6 +43,9 @@ std::vector<int> packetsPerSec[10];
 int allPacketsRecieved = 0;
 std::vector<double> allPacketsArrivalTimes = {};
 std::vector<int> allPacketsMeassurements[10];
+
+// graph 9
+std::vector<double> bitRates = {};
 
 // position allocators accessible from callbacks
 bool returningHome = false;
@@ -258,7 +264,7 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     Config::ConnectWithoutContext("/NodeList/21/$ns3::MobilityModel/CourseChange", MakeCallback(&returnHomeCallback));
     if (makeGraph >= 1 && makeGraph <= 8)
         Config::ConnectWithoutContext("/NodeList/0/ApplicationList/0/$ns3::PacketSink/Rx", MakeCallback(&packetReceivedCallback));
-    if (makeGraph >= 5 && makeGraph <= 8)
+    if (makeGraph >= 5 && makeGraph <= 9)
         Config::ConnectWithoutContext("/NodeList/0/DeviceList/0/$ns3::CsmaNetDevice/MacRx", MakeCallback(&macRecievePacketCallback));
 
     Simulator::Schedule(Seconds(5.0), &changeRobotSpeed);
@@ -357,9 +363,19 @@ int main(int argc, char *argv[]) {
                 graf.SetLegend("Cas [s]", "podiel datove pakety ku vsetkym paketom");
                 data.SetTitle("goodput (AODV 5kbit)");
                 break;
+            case 9:
+                graf.SetTitle("Graf zavislosti poctu prijatych paketov od rychlosti ethernetovej linky");
+                graf.SetLegend("Rychlost [kbit]", "pocet prijatych paketov za celu simulaciu");
+                data.SetTitle("pocet paketov (AODV)");
+                break;
         }
 
-        graf.AppendExtra("set xrange[0:32]");
+        if (makeGraph >= 1 && makeGraph <= 8)
+            graf.AppendExtra("set xrange[0:32]");
+        if (makeGraph == 9) {
+            graf.AppendExtra("set logscale x");
+            graf.AppendExtra("set xrange[1000:5000000]");
+        }
 
         data.SetStyle(Gnuplot2dDataset::LINES); // use LINES_POINTS if you want to have errorbars with the line in one dataset
         // Two lines because if the errorbars have the same color as the line it looks ugly
@@ -408,26 +424,48 @@ int main(int argc, char *argv[]) {
             dataRatekb = 5;
             olsrRouting = false;
             break;
+        case 9:
+            olsrRouting = false;
+            break;
+    }
+
+    int outerRuns = 1;
+    if (makeGraph == 9) {
+        outerRuns = 8;
+        bitRates.clear();
     }
 
     // Perform simulations
-    for (uint64_t i = 0; i < nRuns; i++) {
-        if (makeGraph >= 1 && makeGraph <= 8) {
-            packetsReceived = 0;
-            arrivalTimes.clear();
-        }
-        if (makeGraph >= 5 && makeGraph <= 8) {
-            allPacketsRecieved = 0;
-            allPacketsArrivalTimes.clear();
+    for (int outer = 0; outer < outerRuns; ++outer) {
+        if (makeGraph == 9) {
+            dataRatekb = pow(10.0, 0.5 * outer); // evenly spaces speeds (on log scale) from ~1kbit to ~5Mbit
+            bitRates.push_back(dataRatekb*1000);
         }
 
-        doSimulation(olsrRouting, dataRatekb);
+        for (uint64_t i = 0; i < nRuns; i++) {
+            if (makeGraph >= 1 && makeGraph <= 8) {
+                packetsReceived = 0;
+                arrivalTimes.clear();
+            }
+            if (makeGraph >= 5 && makeGraph <= 9) {
+                allPacketsRecieved = 0;
+                allPacketsArrivalTimes.clear();
+            }
 
-        if (makeGraph >= 1 && makeGraph <= 8)
-            aggregatePacketCount(arrivalTimes, packetsPerSec, i);
-        if (makeGraph >= 5 && makeGraph <= 8)
-            aggregatePacketCount(allPacketsArrivalTimes, allPacketsMeassurements, i);
+            doSimulation(olsrRouting, dataRatekb);
+
+            if (makeGraph >= 1 && makeGraph <= 8)
+                aggregatePacketCount(arrivalTimes, packetsPerSec, i);
+            if (makeGraph >= 5 && makeGraph <= 8)
+                aggregatePacketCount(allPacketsArrivalTimes, allPacketsMeassurements, i);
+            if (makeGraph == 9)
+                allPacketsMeassurements[i].push_back(allPacketsArrivalTimes.size());
+        }
     }
+
+    // add the correct data to the graf
+    if (makeGraph >= 1 && makeGraph <= 4)
+        fillGnuplotData(packetsPerSec);
 
     if (makeGraph >= 5 && makeGraph <= 8) {
         std::vector<double> quotient[10];
@@ -443,10 +481,10 @@ int main(int argc, char *argv[]) {
         fillGnuplotData(quotient);
     }
 
-    if (makeGraph) {
-        if (makeGraph >= 1 && makeGraph <= 4)
-            fillGnuplotData(packetsPerSec);
+    if (makeGraph == 9)
+        fillGnuplotData(allPacketsMeassurements, bitRates);
 
+    if (makeGraph) {
         // zaverecne spustenie
         graf.AddDataset(errorBars);
         graf.AddDataset(data);
@@ -484,6 +522,22 @@ void fillGnuplotData(std::vector<int> meassurements[]) {
 }
 
 void fillGnuplotData(std::vector<double> meassurements[]) {
+    std::vector<double> xVals;
+    for (int i = 0; i < meassurements[0].size(); ++i) {
+        xVals.push_back((double) i);
+    }
+    fillGnuplotData(meassurements, xVals);
+}
+
+void fillGnuplotData(std::vector<int> meassurements[], std::vector<double> xValues) {
+    std::vector<double> doubles[10];
+    for (int i = 0; i < 10; ++i) {
+        doubles[i] = std::vector<double>(meassurements[i].begin(), meassurements[i].end());
+    }
+    fillGnuplotData(doubles, xValues);
+}
+
+void fillGnuplotData(std::vector<double> meassurements[], std::vector<double> xValues) {
     for (int i = 0; i < meassurements[0].size(); ++i) {
         double average = 0.0;
         for (int j = 0; j < 10; ++j) {
@@ -499,7 +553,7 @@ void fillGnuplotData(std::vector<double> meassurements[]) {
         deviation /= 10;
         deviation = sqrt(deviation);
 
-        data.Add(i, average);
-        errorBars.Add(i, average, deviation);
+        data.Add(xValues[i], average);
+        errorBars.Add(xValues[i], average, deviation);
     }
 }
