@@ -132,7 +132,7 @@
 </g>
 <g fill="none" color="black" stroke="currentColor" stroke-width="1.00" stroke-linecap="butt" stroke-linejoin="miter">
 	<g transform="translate(315.1,31.0)" stroke="none" fill="black" font-family="Arial" font-size="12.00"  text-anchor="middle">
-		<text><tspan font-family="Arial" >Graf zavislosti mnozstva prijatych datovych paketov od casu (5Mbit pripojenie, OLSR)</tspan></text>
+		<text><tspan font-family="Arial" >Graf zavislosti mnozstva prijatych datovych paketov od casu</tspan></text>
 	</g>
 </g>
 	<g id="gnuplot_plot_1" ><title>smerodajna odchylka</title>
@@ -197,10 +197,10 @@
 	<use xlink:href='#gpPt0' transform='translate(537.3,72.1) scale(4.50)' color='rgb(148,   0, 211)'/>
 </g>
 	</g>
-	<g id="gnuplot_plot_2" ><title>Untitled</title>
+	<g id="gnuplot_plot_2" ><title>prijate pakety (OLSR 5Mbit)</title>
 <g fill="none" color="black" stroke="currentColor" stroke-width="1.00" stroke-linecap="butt" stroke-linejoin="miter">
 	<g transform="translate(507.9,94.0)" stroke="none" fill="black" font-family="Arial" font-size="12.00"  text-anchor="end">
-		<text><tspan font-family="Arial" >Untitled</tspan></text>
+		<text><tspan font-family="Arial" >prijate pakety (OLSR 5Mbit)</tspan></text>
 	</g>
 </g>
 <g fill="none" color="black" stroke="currentColor" stroke-width="1.00" stroke-linecap="butt" stroke-linejoin="miter">
