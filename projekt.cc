@@ -247,7 +247,7 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
     ///////////////////////////////////////////////////////////////////////////
 
     Config::ConnectWithoutContext("/NodeList/21/$ns3::MobilityModel/CourseChange", MakeCallback(&returnHomeCallback));
-    if(makeGraph == 1){
+    if((makeGraph == 1) || (makeGraph == 2) || (makeGraph == 3) || (makeGraph == 4)){
         Config::ConnectWithoutContext("/NodeList/0/ApplicationList/0/$ns3::PacketSink/Rx", MakeCallback(&packetReceivedCallback));
     }
     // TODO: should only be registered if some graphs are being made (to speed thing up)
@@ -308,18 +308,27 @@ int main(int argc, char *argv[]) {
     Gnuplot graf("graf" + std::to_string(makeGraph) + ".svg");
     if(makeGraph){
         graf.SetTerminal("svg");
-        if(makeGraph == 1){
-            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
+        if((makeGraph == 1) || (makeGraph == 2) || (makeGraph == 3) || (makeGraph == 4)){
             graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
             graf.AppendExtra("set xrange[0:32]");
-            
             // Two lines because if the errorbars have the same color as the line it looks ugly
             //data.SetTitle ("strata udajov");
             data.SetStyle (Gnuplot2dDataset::LINES); // use LINES_POINTS if you want to have errorbars with the line in one dataset
-            
             errorBars.SetTitle("smerodajna odchylka");
             errorBars.SetStyle (Gnuplot2dDataset::POINTS);
             errorBars.SetErrorBars(Gnuplot2dDataset::Y);
+        }
+        if(makeGraph == 1){
+            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu (5Mbit pripojenie, OLSR)");
+        }
+        else if (makeGraph == 2){
+            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu (5Kbit pripojenie, OLSR)");
+        }
+        else if (makeGraph == 3){
+            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu (5Mbit pripojenie, AODV)");
+        }
+        else if (makeGraph == 4){
+            graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu (5kbit pripojenie, AODV)");
         }
     }
     
@@ -339,12 +348,19 @@ int main(int argc, char *argv[]) {
     seedManager.SetRun(nRuns);
 
     // Default simulation parameters
-    uint64_t dataRatekb = 5000; // in kilo bits
-    bool olsrRouting = false; // false = AODV
+    int64_t dataRatekb = 5000; // in kilo bits
+    bool olsrRouting = true; // false = AODV
+    if((makeGraph == 2) ||(makeGraph == 4)){
+        uint64_t dataRatekb = 5;
+    }
+    
+    if((makeGraph == 3) || (makeGraph == 4)){
+        bool olsrRouting = false;
+    }
 
     // Perform simulations
     for (uint64_t i = 0; i < nRuns; i++) {
-        if(makeGraph == 1){
+        if((makeGraph == 1) || (makeGraph == 2) || (makeGraph == 3) || (makeGraph == 4)){
             packetsReceived = 0;
             arrivalTimes.clear();
         }
