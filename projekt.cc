@@ -498,18 +498,21 @@ int main(int argc, char *argv[]) {
 }
 
 void aggregatePacketCount(std::vector<double> packetArrivalTimes, std::vector<int> meassurementsArray[], uint64_t index) {
-    for (int j = 0; j < packetArrivalTimes.size(); j++) {
+    int j = 0;
+    do{
         for (int k = 0; k < simTime; k++) {
             if (j == 0)
                 meassurementsArray[index].push_back(0);
-
-            if (packetArrivalTimes[j] >= k && packetArrivalTimes[j] < k + 1) {
-                meassurementsArray[index][k]++;
-                if (j != 0)
-                    break;
+            if(packetArrivalTimes.size() > 0){
+                if (packetArrivalTimes[j] >= k && packetArrivalTimes[j] < k + 1) {
+                    meassurementsArray[index][k]++;
+                    if (j != 0)
+                        break;
+                }
             }
         }
-    }
+        j++;
+    } while(j < packetArrivalTimes.size());
 }
 
 void fillGnuplotData(std::vector<int> meassurements[]) {
