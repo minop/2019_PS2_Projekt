@@ -28,9 +28,11 @@ bool doNetanim = false;
 int makeGraph = 0;
 int simTime = 30;
 Gnuplot2dDataset data;
+Gnuplot2dDataset errorBars;
 int packetsReceived = 0;
 std::vector<double> arrivalTimes = {};
 std::vector<int> packetsPerSec[10];
+
 // position allocators accessible from callbacks
 bool returningHome = false;
 Ptr<RandomRectanglePositionAllocator> waypointAllocator;
@@ -310,11 +312,17 @@ int main(int argc, char *argv[]) {
             graf.SetTitle("Graf zavislosti mnozstva prijatych datovych paketov od casu");
             graf.SetLegend("Cas [s]","Mnozstvo prijatych paketov");
             graf.AppendExtra("set xrange[0:32]");
+            
+            // Two lines because if the errorbars have the same color as the line it looks ugly
             //data.SetTitle ("strata udajov");
-            data.SetStyle (Gnuplot2dDataset::LINES);
-            data.SetErrorBars(Gnuplot2dDataset::Y);
+            data.SetStyle (Gnuplot2dDataset::LINES); // use LINES_POINTS if you want to have errorbars with the line in one dataset
+            
+            errorBars.SetTitle("smerodajna odchylka");
+            errorBars.SetStyle (Gnuplot2dDataset::POINTS);
+            errorBars.SetErrorBars(Gnuplot2dDataset::Y);
         }
     }
+    
     // How many times will the simulation be run?
     uint64_t nRuns;
     if (makeGraph > 0 && makeGraph < 10)
@@ -366,6 +374,7 @@ int main(int argc, char *argv[]) {
     if (makeGraph) {
         fillGnuplotData(packetsPerSec);
         //zaverecne spustenie
+        graf.AddDataset (errorBars);
         graf.AddDataset (data);
         std::ofstream plotFile ("graf" + std::to_string(makeGraph) + ".plt");
         graf.GenerateOutput (plotFile);
@@ -401,6 +410,7 @@ void fillGnuplotData(std::vector<double> meassurements[]) {
         deviation /= 10;
         deviation = sqrt(deviation);
         
-        data.Add(i, average, deviation);
+        data.Add(i, average);
+        errorBars.Add(i, average, deviation);
     }
 }
