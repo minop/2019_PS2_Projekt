@@ -97,7 +97,7 @@ static void changePingFrequency() {
     Config::Set("NodeList/21/ApplicationList/0/$ns3::OnOffApplication/OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.5]"));
 }
 
-static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
+static void doSimulation(bool olsrRouting, uint64_t dataRatekb, double simulationTime) {
     // Server Node
     NodeContainer serverNodes;
     serverNodes.Create(1);
@@ -243,7 +243,7 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
 
     ApplicationContainer apps = onoff.Install(robot);
     apps.Start(Seconds(3));
-    apps.Stop(Seconds(simTime - 1));
+    apps.Stop(Seconds(simulationTime - 1));
 
     // Create a packet sink to receive these packets
     PacketSinkHelper sink("ns3::UdpSocketFactory",
@@ -289,14 +289,14 @@ static void doSimulation(bool olsrRouting, uint64_t dataRatekb) {
 
         anim.EnablePacketMetadata();
 
-        runSim(simTime);
+        runSim(simulationTime);
     } else {
-        runSim(simTime);
+        runSim(simulationTime);
     }
 }
 
-void runSim(int simTime) {
-    Simulator::Stop(Seconds(simTime));
+void runSim(double simulationTime) {
+    Simulator::Stop(Seconds(simulationTime));
     Simulator::Run();
     Simulator::Destroy();
 }
@@ -307,12 +307,14 @@ int main(int argc, char *argv[]) {
     Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("100kb/s"));
 
     // CommandLine arguments
+	double st = 30.0;
     CommandLine cmd;
-    cmd.AddValue("doNetanim", "Generate NetAnim file", doNetanim);
-    cmd.AddValue("simTime", "Total simulation time", simTime);
+    cmd.AddValue("anim", "Generate NetAnim file", doNetanim);
+    cmd.AddValue("simulTime", "Total simulation time", st);
     cmd.AddValue("robotCallbackLogging", "Enable logging of robot callback", logRobotCallback);
     cmd.AddValue("graph", "[0-9], which graph should be generated; 0 for none", makeGraph);
     cmd.Parse(argc, argv);
+	simTime = (int) st;
 
     // prvotne nastavenia v hl.funkcii
     Gnuplot graf("graf" + std::to_string(makeGraph) + ".svg");
