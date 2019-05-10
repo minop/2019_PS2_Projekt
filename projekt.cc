@@ -19,7 +19,7 @@
 
 using namespace ns3;
 
-void runSim(int);
+void runSim(double);
 void fillGnuplotData(std::vector<int> meassurements[]);
 void fillGnuplotData(std::vector<double> meassurements[]);
 void fillGnuplotData(std::vector<int> meassurements[], std::vector<double> xValues);
@@ -450,7 +450,7 @@ int main(int argc, char *argv[]) {
                 allPacketsArrivalTimes.clear();
             }
 
-            doSimulation(olsrRouting, dataRatekb);
+            doSimulation(olsrRouting, dataRatekb, st);
 
             if (makeGraph >= 1 && makeGraph <= 8)
                 aggregatePacketCount(arrivalTimes, packetsPerSec, i);
